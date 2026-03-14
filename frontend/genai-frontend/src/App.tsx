@@ -1,9 +1,19 @@
+<<<<<<< Updated upstream
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 import AnatomyViewer from './AnatomyViewer.tsx'
+=======
+import { useState } from "react";
+import { SearchPanel } from "./app/components/SearchPanel";
+import { HumanBody3D } from "./app/components/HumanBody3D";
+import { DiseaseStagePanel } from "./app/components/DiseaseStagePanel";
+import { DISEASES } from "./types";
+import type { Disease } from "./types";
+import AnatomyViewer from "./app/components/AnatomyViewer";
+>>>>>>> Stashed changes
 
 function App() {
   const [count, setCount] = useState(0)
@@ -33,7 +43,31 @@ function App() {
         </button>
       </section>
 
+<<<<<<< Updated upstream
       <div className="ticks"></div>
+=======
+        <main className="min-w-0 flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/45 shadow-[0_18px_60px_rgba(2,6,23,0.35)] backdrop-blur-xl">
+          {selectedDisease && currentStage ? (
+            <AnatomyViewer 
+                affectedOrgans={currentStage.affectedOrgans}
+                currentStageIndex={currentStageIndex}
+                totalStages={selectedDisease.stages.length}
+                diseaseName={selectedDisease.name}
+            />
+            // <HumanBody3D
+            //   affectedOrgans={currentStage.affectedOrgans}
+            //   currentStageIndex={currentStageIndex}
+            //   totalStages={selectedDisease.stages.length}
+            //   diseaseName={selectedDisease.name}
+            //   currentStage={currentStage}
+            // />
+          ) : (
+            <div className="grid h-full place-items-center px-8 text-center text-slate-300">
+              Select a disease to view progression.
+            </div>
+          )}
+        </main>
+>>>>>>> Stashed changes
 
       <section id="next-steps">
         <div id="docs">
