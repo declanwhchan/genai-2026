@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { ORGAN_POSITIONS_3D } from "../../types";
+import { DISEASES, ORGAN_POSITIONS_3D } from "../../types";
 import type { DiseaseStage } from "../../types";
 
 interface HumanBody3DProps {
@@ -12,10 +12,34 @@ interface HumanBody3DProps {
   currentStage: DiseaseStage;
 }
 
+interface HoverInfo {
+  name: string;
+  x: number;
+  y: number;
+}
+
 const SEVERITY_COLORS = [
-  { main: "#fbbf24", glow: "#fbbf2480", label: "Early" },
-  { main: "#f97316", glow: "#f9731680", label: "Progressive" },
-  { main: "#ef4444", glow: "#ef444480", label: "Severe" },
+  {
+    main: "#d97706",
+    glow: "#f59e0b80",
+    label: "Early",
+    range: "Mild inflammation",
+    description: "Early organ stress with subtle physiological changes.",
+  },
+  {
+    main: "#ea580c",
+    glow: "#f9731680",
+    label: "Progressive",
+    range: "Escalating impact",
+    description: "Disease pathways expand and symptom burden becomes visible.",
+  },
+  {
+    main: "#dc2626",
+    glow: "#ef444480",
+    label: "Severe",
+    range: "Critical burden",
+    description: "Multiple systems are affected with high-risk progression.",
+  },
 ];
 
 export function HumanBody3D({
@@ -29,15 +53,37 @@ export function HumanBody3D({
   const containerRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState({ x: 0.15, y: 0.2 });
   const [isDragging, setIsDragging] = useState(false);
-  const [hoveredOrgan, setHoveredOrgan] = useState<{ name: string; x: number; y: number } | null>(null);
-  const hoveredOrganRef = useRef<{ name: string; x: number; y: number } | null>(null);
+  const [hoveredOrgan, setHoveredOrgan] = useState<HoverInfo | null>(null);
+  const hoveredOrganRef = useRef<HoverInfo | null>(null);
   const mousePosRef = useRef({ x: -1, y: -1 });
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const animationTimeRef = useRef(0);
   const rotationRef = useRef(rotation);
   const scaleRef = useRef(scale);
+
+  const organsUsedInDisease = useMemo(() => {
+    const disease = DISEASES.find((item) => item.name === diseaseName);
+    const used = new Set<string>();
+
+    disease?.stages.forEach((stage) => {
+      stage.affectedOrgans.forEach((organ) => used.add(organ));
+    });
+
+    return used;
+  }, [diseaseName]);
+
+  useEffect(() => {
+    document.body.classList.toggle("cursor-grabbing", isDragging);
+    if (isDragging) {
+      document.body.classList.remove("cursor-grab");
+    }
+
+    return () => {
+      document.body.classList.remove("cursor-grabbing");
+    };
+  }, [isDragging]);
 
   useEffect(() => {
     rotationRef.current = rotation;
@@ -183,28 +229,6 @@ export function HumanBody3D({
       ctx.globalAlpha = 1;
     };
 
-    const drawGrid = () => {
-      const w = canvas.width;
-      const h = canvas.height;
-      const gridSize = 40;
-
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.04)";
-      ctx.lineWidth = 1;
-
-      for (let x = 0; x < w; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
-      }
-      for (let y = 0; y < h; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-    };
-
     const animate = () => {
       animationTimeRef.current += 0.025;
       const t = animationTimeRef.current;
@@ -212,17 +236,11 @@ export function HumanBody3D({
       const w = canvas.width;
       const h = canvas.height;
 
-      const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.8);
-      bgGrad.addColorStop(0, "#111827");
-      bgGrad.addColorStop(1, "#080c14");
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
-      drawGrid();
-
-      const bodyGlow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.25);
-      bodyGlow.addColorStop(0, "rgba(6, 182, 212, 0.04)");
-      bodyGlow.addColorStop(1, "rgba(6, 182, 212, 0)");
+      const bodyGlow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.24);
+      bodyGlow.addColorStop(0, "rgba(8, 145, 178, 0.025)");
+      bodyGlow.addColorStop(1, "rgba(8, 145, 178, 0)");
       ctx.fillStyle = bodyGlow;
       ctx.fillRect(0, 0, w, h);
 
@@ -230,8 +248,8 @@ export function HumanBody3D({
       const skinMid = "#d4a374";
       const skinBase = "#e0b898";
 
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = "#000";
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = "#1e293b";
       ctx.beginPath();
       const shadowX = project3D(0, -1.4, 0);
       ctx.ellipse(shadowX.x + 10, shadowX.y + 8, 50 * scaleRef.current, 20 * scaleRef.current, 0, 0, Math.PI * 2);
@@ -271,10 +289,15 @@ export function HumanBody3D({
         return pA.z - pB.z;
       });
 
-      let foundHover: { name: string; x: number; y: number } | null = null;
+      let foundHover: HoverInfo | null = null;
 
       organEntries.forEach(([organ, pos]) => {
         const isAffected = affectedOrgans.includes(organ);
+        const isUsedInAnyStage = organsUsedInDisease.has(organ);
+        if (!isUsedInAnyStage) {
+          return;
+        }
+
         const isHovered = hoveredOrganRef.current?.name === organ;
         const pulse = Math.sin(t * 2.5 + organ.length) * 0.5 + 0.5;
         const p = project3D(pos.x, pos.y, pos.z);
@@ -284,24 +307,13 @@ export function HumanBody3D({
         const dx = mousePosRef.current.x - p.x;
         const dy = mousePosRef.current.y - p.y;
 
-        if (dx * dx + dy * dy < r * r) {
+        if (isAffected && dx * dx + dy * dy < r * r) {
           foundHover = { name: organ, x: p.x, y: p.y };
         }
 
         if (isAffected) {
-          const glowSize = isHovered ? 0.14 + pulse * 0.04 : 0.11 + pulse * 0.035;
           const glowP = project3D(pos.x, pos.y, pos.z);
           const sc = Math.min(w * 0.4, h * 0.235) * scaleRef.current;
-          const gr = glowSize * sc * glowP.scale;
-
-          const glowGrad = ctx.createRadialGradient(glowP.x, glowP.y, 0, glowP.x, glowP.y, gr * 2);
-          glowGrad.addColorStop(0, severityColor.glow.replace("80", isHovered ? "75" : "60"));
-          glowGrad.addColorStop(0.5, severityColor.glow.replace("80", isHovered ? "40" : "30"));
-          glowGrad.addColorStop(1, "transparent");
-          ctx.fillStyle = glowGrad;
-          ctx.beginPath();
-          ctx.arc(glowP.x, glowP.y, gr * 2, 0, Math.PI * 2);
-          ctx.fill();
 
           const markerSize = isHovered ? 0.082 + pulse * 0.018 : 0.065 + pulse * 0.015;
           drawBodyPart(pos.x, pos.y, pos.z, markerSize, severityColor.main, 0.9 + pulse * 0.1);
@@ -333,16 +345,22 @@ export function HumanBody3D({
           ctx.lineTo(lp.x, lp.y - (isHovered ? 20 : 14));
           ctx.stroke();
           ctx.globalAlpha = 1;
-        } else {
-          drawBodyPart(pos.x, pos.y, pos.z, isHovered ? 0.045 : 0.035, isHovered ? "#64748b" : "#334155", isHovered ? 0.95 : 0.7);
+        }
+
+        if (!isAffected) {
+          drawBodyPart(
+            pos.x,
+            pos.y,
+            pos.z,
+            isHovered ? 0.043 : 0.034,
+            isHovered ? "#64748b" : "#94a3b8",
+            isHovered ? 0.9 : 0.75,
+          );
         }
       });
 
       const previousHover = hoveredOrganRef.current;
-      const hoverChanged =
-        previousHover?.name !== foundHover?.name ||
-        previousHover?.x !== foundHover?.x ||
-        previousHover?.y !== foundHover?.y;
+      const hoverChanged = JSON.stringify(previousHover) !== JSON.stringify(foundHover);
 
       if (hoverChanged) {
         hoveredOrganRef.current = foundHover;
@@ -357,8 +375,9 @@ export function HumanBody3D({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       resizeObs.disconnect();
+      document.body.classList.remove("cursor-grab", "cursor-grabbing");
     };
-  }, [affectedOrgans, currentStageIndex, totalStages, diseaseName]);
+  }, [affectedOrgans, currentStageIndex, totalStages, diseaseName, organsUsedInDisease]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -395,27 +414,44 @@ export function HumanBody3D({
     ? currentStage.symptoms.slice(0, 3)
     : ["No direct involvement in the current stage."];
 
-  return (
-    <div className="relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[#080c14]">
-      <div className="z-10 flex items-center justify-between gap-4 px-6 pt-5 pb-3">
-        <div>
-          <h2 className="text-sm uppercase tracking-widest text-white/80">3D Disease Progression</h2>
-          <p className="mt-0.5 text-xs text-slate-600">Interactive anatomical visualization</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: severityColor.main }} />
-            <span className="text-xs" style={{ color: severityColor.main }}>
-              Stage {currentStageIndex + 1}/{totalStages} · {severityColor.label}
-            </span>
-          </div>
-        </div>
-      </div>
+  const hoverPanelStyle = (() => {
+    if (!hoveredOrgan || !containerRef.current) {
+      return undefined;
+    }
 
+    const rect = containerRef.current.getBoundingClientRect();
+    const controlGutter = 82;
+    const panelWidth = Math.min(330, Math.max(240, rect.width - 28 - controlGutter));
+    const panelHeight = 240;
+    const edgePadding = 12;
+
+    let left = hoveredOrgan.x + 26;
+    let top = hoveredOrgan.y - 18;
+
+    const maxLeft = Math.max(edgePadding, rect.width - panelWidth - edgePadding - controlGutter);
+
+    if (left > maxLeft) {
+      left = hoveredOrgan.x - panelWidth - 26;
+    }
+
+    left = Math.max(edgePadding, Math.min(left, maxLeft));
+    top = Math.max(edgePadding, Math.min(top, rect.height - panelHeight - edgePadding));
+
+    return {
+      left,
+      top,
+      width: panelWidth,
+    };
+  })();
+
+  return (
+    <div className="relative h-full min-h-0 overflow-hidden bg-transparent">
       <div
         ref={containerRef}
-        className="relative min-h-0 w-full"
-        style={{ cursor: isDragging ? "grabbing" : hoveredOrgan ? "pointer" : "grab" }}
+        className="relative h-full w-full cursor-none"
+        onMouseEnter={() => {
+          document.body.classList.add("cursor-grab");
+        }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -424,11 +460,13 @@ export function HumanBody3D({
           mousePosRef.current = { x: -1, y: -1 };
           hoveredOrganRef.current = null;
           setHoveredOrgan(null);
+          setIsDragging(false);
+          document.body.classList.remove("cursor-grab", "cursor-grabbing");
         }}
       >
         <canvas
           ref={canvasRef}
-          className="h-full w-full"
+          className="h-full w-full cursor-none"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -436,37 +474,24 @@ export function HumanBody3D({
           onWheel={handleWheel}
         />
 
-        {hoveredOrgan && containerRef.current && (
-          <div
-            className="pointer-events-none absolute z-50 -translate-x-1/2 -translate-y-[calc(100%+15px)] rounded-lg border border-white/10 bg-slate-900/85 px-3 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur-sm"
-            style={{
-              left: hoveredOrgan.x,
-              top: hoveredOrgan.y,
-            }}
-          >
-            <p className="font-bold text-white capitalize">{hoveredOrgan.name}</p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.18em]" style={{ color: hoveredOrganAffected ? severityColor.main : "#94a3b8" }}>
-              {hoveredOrganAffected ? `${diseaseName} • ${currentStage.name}` : "Monitoring"}
-            </p>
-          </div>
-        )}
       </div>
 
       <div
-        className={`pointer-events-none absolute bottom-5 left-5 z-40 w-[min(320px,calc(100%-2.5rem))] origin-bottom-left rounded-2xl border bg-slate-950/70 p-4 text-sm shadow-[0_24px_60px_rgba(2,6,23,0.45)] backdrop-blur-md transition-all duration-300 ${
+        className={`pointer-events-none absolute z-40 rounded-2xl border bg-white/95 p-4 text-sm shadow-[0_20px_50px_rgba(15,23,42,0.16)] backdrop-blur-md transition-all duration-300 ${
           hoveredOrgan ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"
         }`}
         style={{
-          borderColor: hoveredOrganAffected ? `${severityColor.main}35` : "rgba(255,255,255,0.08)",
+          ...hoverPanelStyle,
+          borderColor: hoveredOrganAffected ? `${severityColor.main}35` : "rgba(148,163,184,0.35)",
           boxShadow: hoveredOrganAffected
-            ? `0 24px 60px rgba(2,6,23,0.45), 0 0 0 1px ${severityColor.main}14`
-            : "0 24px 60px rgba(2,6,23,0.45)",
+            ? `0 20px 50px rgba(15,23,42,0.16), 0 0 0 1px ${severityColor.main}14`
+            : "0 20px 50px rgba(15,23,42,0.16)",
         }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Hover Insight</p>
-            <h3 className="mt-1 text-base font-semibold text-white capitalize">
+            <h3 className="mt-1 text-base font-semibold text-slate-900 capitalize">
               {hoveredOrgan?.name ?? "Explore an organ"}
             </h3>
           </div>
@@ -476,7 +501,7 @@ export function HumanBody3D({
           />
         </div>
 
-        <p className="mt-3 text-slate-300">
+        <p className="mt-3 text-slate-700">
           {hoveredOrgan
             ? hoveredOrganAffected
               ? `${diseaseName} is interacting with the ${hoveredOrgan.name} during ${currentStage.timeline.toLowerCase()}.`
@@ -484,7 +509,7 @@ export function HumanBody3D({
             : "Hover over a marker to see stage-specific organ context, symptoms, and disease activity."}
         </p>
 
-        <p className="mt-3 text-slate-400">
+        <p className="mt-3 text-slate-600">
           {hoveredOrgan
             ? hoveredOrganAffected
               ? currentStage.biologicalProcess
@@ -500,7 +525,7 @@ export function HumanBody3D({
               style={{
                 borderColor: hoveredOrganAffected ? `${severityColor.main}50` : "rgba(148,163,184,0.25)",
                 background: hoveredOrganAffected ? `${severityColor.main}18` : "rgba(148,163,184,0.08)",
-                color: hoveredOrganAffected ? severityColor.main : "#cbd5e1",
+                color: hoveredOrganAffected ? severityColor.main : "#64748b",
               }}
             >
               {symptom}
@@ -508,84 +533,52 @@ export function HumanBody3D({
           ))}
         </div>
 
-        <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
-          <span className="rounded-full border border-white/10 px-2 py-1">{currentStage.name}</span>
-          <span className="rounded-full border border-white/10 px-2 py-1">{currentStage.timeline}</span>
+        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+          <span className="rounded-full border border-slate-200 px-2 py-1">{currentStage.name}</span>
+          <span className="rounded-full border border-slate-200 px-2 py-1">{currentStage.timeline}</span>
         </div>
       </div>
 
-      <div className="px-6 pb-5 pt-3 pointer-events-none">
-        <div className="flex items-end justify-between">
-          <div className="flex items-center gap-4">
-            {SEVERITY_COLORS.map((sv) => (
-              <div key={sv.label} className="pointer-events-auto relative group">
-                <div className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: sv.main, boxShadow: `0 0 6px ${sv.main}80` }} />
-                  <span className="text-xs text-slate-400">{sv.label}</span>
-                </div>
-                <div className="pointer-events-none absolute bottom-full left-1/2 mb-3 w-56 -translate-x-1/2 rounded-2xl border border-white/10 bg-slate-950/92 p-3 text-left opacity-0 shadow-[0_24px_60px_rgba(2,6,23,0.5)] backdrop-blur-md transition-all duration-200 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100">
-                  <p className="text-xs font-semibold" style={{ color: sv.main }}>{sv.label} · {sv.range}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-300">{sv.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-slate-700">
-            <div className="pointer-events-auto relative ml-2 group">
-              <button className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300 transition-all duration-200 hover:border-cyan-400/40 hover:bg-cyan-400/15">
-                Help ?
-              </button>
-              <div className="pointer-events-none absolute bottom-full right-0 mb-3 w-72 rounded-2xl border border-white/10 bg-slate-950/92 p-4 text-left opacity-0 shadow-[0_24px_60px_rgba(2,6,23,0.5)] backdrop-blur-md transition-all duration-200 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Quick Help</p>
-                <div className="mt-3 space-y-2 text-sm text-slate-300">
-                  <p><span className="text-cyan-300">1.</span> Hover on a circle to pop up disease info for that organ.</p>
-                  <p><span className="text-cyan-300">2.</span> Drag across the body to rotate it and inspect different angles.</p>
-                  <p><span className="text-cyan-300">3.</span> Scroll or use the side controls to zoom in, zoom out, and reset.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="pointer-events-auto absolute right-5 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2">
+        <div className="mb-1 flex items-center gap-1.5 rounded-full border border-slate-200/75 bg-white/80 px-2.5 py-1 shadow-sm">
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: severityColor.main }} />
+          <span className="text-[11px] font-medium" style={{ color: severityColor.main }}>
+            Stage {currentStageIndex + 1}/{totalStages}
+          </span>
         </div>
 
-        {affectedOrgans.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {affectedOrgans.map((organ) => (
-              <span
-                key={organ}
-                className="rounded-full border px-2.5 py-1 text-xs capitalize"
-                style={{
-                  background: `${severityColor.main}15`,
-                  color: severityColor.main,
-                  borderColor: `${severityColor.main}30`,
-                }}
-              >
-                {organ}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="pointer-events-auto absolute right-5 top-1/2 flex -translate-y-1/2 flex-col gap-2">
         <button
           onClick={() => setScale((p) => Math.min(2.5, p + 0.15))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.05] text-slate-400 transition-all hover:bg-white/[0.1] hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/75 bg-white/80 text-slate-600 transition-all hover:bg-white hover:text-slate-900"
         >
           <ZoomIn size={14} />
         </button>
         <button
           onClick={() => setScale((p) => Math.max(0.5, p - 0.15))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.05] text-slate-400 transition-all hover:bg-white/[0.1] hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/75 bg-white/80 text-slate-600 transition-all hover:bg-white hover:text-slate-900"
         >
           <ZoomOut size={14} />
         </button>
         <button
           onClick={resetView}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.05] text-slate-400 transition-all hover:bg-white/[0.1] hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/75 bg-white/80 text-slate-600 transition-all hover:bg-white hover:text-slate-900"
         >
           <RotateCcw size={14} />
         </button>
+
+        <div className="relative mt-1 group">
+          <button className="rounded-full border border-cyan-400/50 bg-cyan-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-700 transition-all duration-200 hover:border-cyan-500/70 hover:bg-cyan-200">
+            Help
+          </button>
+          <div className="pointer-events-none absolute right-full top-1/2 mr-3 w-72 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white/95 p-4 text-left opacity-0 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-md transition-all duration-200 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Quick Help</p>
+            <div className="mt-3 space-y-2 text-sm text-slate-700">
+              <p><span className="text-cyan-700">1.</span> Hover on a circle to see organ-specific disease context.</p>
+              <p><span className="text-cyan-700">2.</span> Drag the body to rotate and inspect from multiple angles.</p>
+              <p><span className="text-cyan-700">3.</span> Scroll or use zoom controls, then reset with rotate.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

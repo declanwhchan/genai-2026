@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, Dot } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { motion } from "./motion";
 import type { DiseaseStage } from "../../types";
 
 interface DiseaseStagePanelProps {
@@ -8,110 +9,205 @@ interface DiseaseStagePanelProps {
   diseaseName: string;
 }
 
+interface StageAccent {
+  main: string;
+  text: string;
+  border: string;
+  soft: string;
+  softHover: string;
+}
+
+const RELIABLE_SOURCES: Record<string, Array<{ label: string; href: string }>> = {
+  "COVID-19": [
+    { label: "WHO - COVID-19", href: "https://www.who.int/health-topics/coronavirus" },
+    { label: "CDC - COVID-19", href: "https://www.cdc.gov/covid/" },
+  ],
+  "Type 2 Diabetes": [
+    { label: "CDC - Type 2 Diabetes", href: "https://www.cdc.gov/diabetes/about/about-type-2-diabetes.html" },
+    { label: "NIH - NIDDK", href: "https://www.niddk.nih.gov/health-information/diabetes/overview/what-is-diabetes/type-2-diabetes" },
+  ],
+  "Influenza (Flu)": [
+    { label: "CDC - Influenza", href: "https://www.cdc.gov/flu/" },
+    { label: "WHO - Influenza", href: "https://www.who.int/news-room/fact-sheets/detail/influenza-(seasonal)" },
+  ],
+  Pneumonia: [
+    { label: "NHS - Pneumonia", href: "https://www.nhs.uk/conditions/pneumonia/" },
+    { label: "Mayo Clinic - Pneumonia", href: "https://www.mayoclinic.org/diseases-conditions/pneumonia/symptoms-causes/syc-20354204" },
+  ],
+};
+
+const STAGE_ACCENTS: StageAccent[] = [
+  {
+    main: "#d97706",
+    text: "#92400e",
+    border: "#fcd34d",
+    soft: "#fef3c7",
+    softHover: "#fde68a",
+  },
+  {
+    main: "#ea580c",
+    text: "#9a3412",
+    border: "#fdba74",
+    soft: "#ffedd5",
+    softHover: "#fed7aa",
+  },
+  {
+    main: "#dc2626",
+    text: "#991b1b",
+    border: "#fca5a5",
+    soft: "#fee2e2",
+    softHover: "#fecaca",
+  },
+];
+
+function getStageAccent(currentStageIndex: number, totalStages: number): StageAccent {
+  const intensity = totalStages <= 1 ? 1 : currentStageIndex / (totalStages - 1);
+  if (intensity < 0.4) return STAGE_ACCENTS[0];
+  if (intensity < 0.75) return STAGE_ACCENTS[1];
+  return STAGE_ACCENTS[2];
+}
+
 export function DiseaseStagePanel({
   stages,
   currentStageIndex,
   onStageSelect,
   diseaseName,
 }: DiseaseStagePanelProps) {
+  const currentStage = stages[currentStageIndex];
+  const trustedSources = RELIABLE_SOURCES[diseaseName] ?? [];
+  const accent = getStageAccent(currentStageIndex, stages.length);
+
   return (
-    <div className="h-full flex flex-col bg-[#0a0e1a] border-l border-white/[0.07]">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-5 border-b border-white/10">
-        <p className="text-xs uppercase tracking-widest text-slate-500 mb-1">Disease Profile</p>
-        <h2 className="text-white text-xl font-semibold tracking-wide">{diseaseName}</h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Viewing Stage {currentStageIndex + 1} of {stages.length}
-        </p>
+    <div className="h-full min-w-0 flex flex-col border-l border-slate-200/80 bg-gradient-to-b from-slate-50 to-slate-100/70">
+      <div className="min-w-0 border-b border-slate-200 px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5 lg:px-6">
+        <p className="mb-1 text-xs uppercase tracking-widest text-slate-500">Disease Profile</p>
+        <h2 className="break-words text-xl font-semibold tracking-wide text-slate-900">{diseaseName}</h2>
       </div>
 
-      {/* Stages List */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
-        {stages.map((stage, index) => {
-          const isActive = index === currentStageIndex;
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-white/82 p-3 sm:p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Stage Selector</p>
+          <div
+            className="relative grid rounded-full border border-slate-200 bg-white p-1"
+            style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
+          >
+            {stages.map((stage, index) => {
+              const isActive = index === currentStageIndex;
+              const btnAccent = getStageAccent(index, stages.length);
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() => onStageSelect(index)}
+                  className="group/stage relative z-10 rounded-full px-2 py-1.5 text-xs font-medium transition-colors"
+                  style={{ color: isActive ? accent.main : "#475569" }}
+                >
+                  {!isActive && (
+                    <span
+                      className="pointer-events-none absolute inset-0 rounded-full border opacity-0 transition-all duration-200 group-hover/stage:opacity-100"
+                      style={{
+                        borderColor: btnAccent.border,
+                        background: btnAccent.soft,
+                      }}
+                    />
+                  )}
+                  {isActive && (
+                    <motion.span
+                      layoutId="stage-selector-pill"
+                      className="absolute inset-0 rounded-full border"
+                      style={{
+                        borderColor: accent.border,
+                        background: accent.soft,
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10">Stage {index + 1}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          return (
-            <button
-              key={stage.id}
-              onClick={() => onStageSelect(index)}
-              className="w-full text-left rounded-2xl border p-5 transition-all duration-200 group relative"
+        <div className="rounded-2xl border border-slate-200 bg-white/86 p-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-slate-900">{currentStage.name}</h3>
+            <span
+              className="rounded-full border px-2.5 py-1 text-xs"
               style={{
-                borderColor: isActive ? "rgba(6,182,212,0.5)" : "rgba(255,255,255,0.07)",
-                background: isActive
-                  ? "linear-gradient(135deg, rgba(6,182,212,0.1), rgba(6,182,212,0.05))"
-                  : "rgba(255,255,255,0.03)",
-                boxShadow: isActive ? "0 0 20px rgba(6,182,212,0.1)" : "none",
+                borderColor: accent.border,
+                background: accent.soft,
+                color: accent.text,
               }}
             >
-              {isActive && (
-                <div className="absolute -top-px -left-px -right-px h-0.5 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-              )}
+              {currentStage.timeline}
+            </span>
+          </div>
 
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <span className={`text-base font-medium ${isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
-                  {stage.name}
-                </span>
-                <span className={`text-xs px-2.5 py-1 rounded-full border ${isActive ? 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20' : 'text-slate-500 bg-white/5 border-white/10'}`}>
-                  Stage {index + 1}
-                </span>
+          {currentStage.symptoms.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Key Symptoms</p>
+              <p className="text-sm text-slate-700">{currentStage.symptoms.slice(0, 4).join(" • ")}</p>
+            </div>
+          )}
+
+          {currentStage.affectedOrgans.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Affected Organs</p>
+              <div className="flex flex-wrap gap-1.5">
+                {currentStage.affectedOrgans.map((organ) => (
+                  <span
+                    key={organ}
+                    className="rounded-full border px-2.5 py-1 text-xs capitalize"
+                    style={{
+                      borderColor: accent.border,
+                      background: accent.soft,
+                      color: accent.text,
+                    }}
+                  >
+                    {organ}
+                  </span>
+                ))}
               </div>
+            </div>
+          )}
 
-              <p className="text-xs text-cyan-500 mb-4">Timeline: {stage.timeline}</p>
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Stage Summary</p>
+            <p className="break-words text-sm leading-relaxed text-slate-600">{currentStage.biologicalProcess}</p>
+          </div>
+        </div>
 
-              <div className="space-y-4">
-                {stage.affectedOrgans.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Affected Organs</p>
-                    <div className="flex flex-wrap gap-2">
-                      {stage.affectedOrgans.map((organ) => (
-                        <span
-                          key={organ}
-                          className="px-2.5 py-1 rounded-full text-xs capitalize border bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
-                        >
-                          {organ}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {stage.symptoms.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Key Symptoms</p>
-                    <ul className="space-y-1.5">
-                      {stage.symptoms.map((symptom, symptomIndex) => (
-                        <li key={symptomIndex} className="flex items-start gap-2 text-sm text-slate-300">
-                          <Dot size={16} className="shrink-0 text-cyan-600 mt-0.5" />
-                          <span>{symptom}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Biological Process</p>
-                  <p className="text-sm text-slate-400 leading-relaxed">{stage.biologicalProcess}</p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+        <div className="rounded-2xl border border-slate-200 bg-white/86 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Explore More (Trusted)</p>
+          <div className="space-y-2">
+            {trustedSources.map((source) => (
+              <a
+                key={source.href}
+                href={source.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <span>{source.label}</span>
+                <ExternalLink size={14} className="text-slate-500" />
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <div className="p-4 border-t border-white/10 flex items-center gap-3">
+      <div className="flex flex-col gap-2 border-t border-slate-200 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
         <button
           onClick={() => onStageSelect(Math.max(0, currentStageIndex - 1))}
           disabled={currentStageIndex === 0}
-          className="flex-1 h-11 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition-all hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft size={16} /> Prev Stage
         </button>
         <button
           onClick={() => onStageSelect(Math.min(stages.length - 1, currentStageIndex + 1))}
           disabled={currentStageIndex === stages.length - 1}
-          className="flex-1 h-11 rounded-xl bg-cyan-600 border border-cyan-500 text-white hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-700 hover:border-cyan-700"
         >
           Next Stage <ChevronRight size={16} />
         </button>
