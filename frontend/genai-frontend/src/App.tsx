@@ -5,6 +5,7 @@ import { DiseaseStagePanel } from "./app/components/DiseaseStagePanel";
 import { LandingPage } from "./app/components/LandingPage";
 import { DISEASES } from "./types";
 import type { Disease } from "./types";
+import AnatomyViewer from "./app/components/AnatomyViewer";
 
 export default function App() {
   const [selectedDisease, setSelectedDisease] = useState<Disease | null>(DISEASES[0]);
@@ -151,21 +152,27 @@ export default function App() {
             />
           </aside>
 
-          <main className="min-w-0 overflow-hidden rounded-[24px] border border-transparent bg-transparent shadow-none lg:rounded-[28px]">
-            {selectedDisease && currentStage ? (
-              <HumanBody3D
+          <main className="min-w-0 flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/45 shadow-[0_18px_60px_rgba(2,6,23,0.35)] backdrop-blur-xl">
+          {selectedDisease && currentStage ? (
+            <AnatomyViewer 
                 affectedOrgans={currentStage.affectedOrgans}
                 currentStageIndex={currentStageIndex}
                 totalStages={selectedDisease.stages.length}
                 diseaseName={selectedDisease.name}
-                currentStage={currentStage}
-              />
-            ) : (
-              <div className="grid h-full place-items-center px-8 text-center text-slate-500">
-                Select a disease to view progression.
-              </div>
-            )}
-          </main>
+            />
+            // <HumanBody3D
+            //   affectedOrgans={currentStage.affectedOrgans}
+            //   currentStageIndex={currentStageIndex}
+            //   totalStages={selectedDisease.stages.length}
+            //   diseaseName={selectedDisease.name}
+            //   currentStage={currentStage}
+            // />
+          ) : (
+            <div className="grid h-full place-items-center px-8 text-center text-slate-300">
+              Select a disease to view progression.
+            </div>
+          )}
+        </main>
 
           <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
             {selectedDisease ? (

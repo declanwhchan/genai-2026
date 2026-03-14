@@ -180,20 +180,20 @@ export const ORGAN_POSITIONS: Record<string, { x: number; y: number }> = {
 };
 
 export const ORGAN_POSITIONS_3D: Record<string, { x: number; y: number; z: number }> = {
-  brain: { x: 0, y: 1.6, z: 0 },
-  eyes: { x: 0, y: 1.5, z: 0.15 },
-  nose: { x: 0, y: 1.4, z: 0.15 },
-  throat: { x: 0, y: 1.2, z: 0 },
-  lungs: { x: 0.25, y: 0.6, z: 0 },
-  heart: { x: -0.1, y: 0.5, z: 0.1 },
-  liver: { x: 0.3, y: 0.2, z: 0.1 },
-  pancreas: { x: -0.2, y: 0.1, z: 0.15 },
-  stomach: { x: 0, y: 0.15, z: 0.2 },
-  kidneys: { x: 0.25, y: 0, z: -0.15 },
-  intestines: { x: 0, y: -0.3, z: 0.1 },
-  blood: { x: 0, y: 0.3, z: -0.2 },
-  immune: { x: 0, y: 0.8, z: -0.2 },
-  muscles: { x: 0.4, y: 0.3, z: 0 },
-  nerves: { x: 0, y: 0.5, z: -0.25 },
-  feet: { x: 0, y: -1.6, z: 0 }
+  brain: { x: 0, y: 0.85, z: -0.02 },
+  eyes: { x: 0, y: 0.82, z: 0.08 },
+  nose: { x: 0, y: 0.75, z: 0.12 },
+  throat: { x: 0, y: 0.65, z: 0 },
+  lungs: { x: 0, y: 0.5, z: 0 },
+  heart: { x: 0.1, y: 0.5, z: 0.1 },
+  liver: { x: -0.1, y: 0.2, z: 0.05 },
+  pancreas: { x: 0, y: 0.2, z: 0.1 },
+  stomach: { x: 0.07, y: 0.2, z: 0.05 },
+  kidneys: { x: 0.07, y: 0.1, z: 0 },
+  intestines: { x: 0, y: 0.12, z: 0.1 },
+  blood: { x: 0, y: 0.3, z: 0 },
+  immune: { x: 0.1, y: 0.6, z: -0.02 },
+  muscles: { x: -0.3, y: 0.3, z: 0 },
+  nerves: { x: -0.1, y: 0.6, z: -0.02 },
+  feet: { x: -0.15, y: -0.85, z: 0 }
 };
