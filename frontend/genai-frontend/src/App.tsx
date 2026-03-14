@@ -152,13 +152,15 @@ export default function App() {
             />
           </aside>
 
-          <main className="min-w-0 flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/45 shadow-[0_18px_60px_rgba(2,6,23,0.35)] backdrop-blur-xl">
+          <main className="min-w-0 flex-1 overflow-hidden rounded-[28px]">
           {selectedDisease && currentStage ? (
             <AnatomyViewer 
                 affectedOrgans={currentStage.affectedOrgans}
+                allUsedOrgans={[...new Set(selectedDisease.stages.flatMap(s => s.affectedOrgans))]}
                 currentStageIndex={currentStageIndex}
                 totalStages={selectedDisease.stages.length}
                 diseaseName={selectedDisease.name}
+                currentStage={currentStage}
             />
             // <HumanBody3D
             //   affectedOrgans={currentStage.affectedOrgans}

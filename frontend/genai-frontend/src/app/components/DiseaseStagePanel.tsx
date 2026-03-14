@@ -202,14 +202,14 @@ export function DiseaseStagePanel({
         <button
           onClick={() => onStageSelect(Math.max(0, currentStageIndex - 1))}
           disabled={currentStageIndex === 0}
-          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition-all hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition-all hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-white/80"
         >
           <ChevronLeft size={16} /> Prev Stage
         </button>
         <button
           onClick={() => onStageSelect(Math.min(stages.length - 1, currentStageIndex + 1))}
           disabled={currentStageIndex === stages.length - 1}
-          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-700 hover:border-cyan-700"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-700 hover:border-cyan-700 disabled:hover:bg-cyan-600 disabled:hover:border-cyan-600"
         >
           Next Stage <ChevronRight size={16} />
         </button>

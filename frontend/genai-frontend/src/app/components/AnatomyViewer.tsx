@@ -4,14 +4,17 @@ import Model from "./Model.tsx";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 import { ORGAN_POSITIONS_3D } from "../../types.ts";
+import type { DiseaseStage } from "../../types.ts";
 import { ZoomIn, ZoomOut, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface AnatomyViewerProps {
   affectedOrgans: string[];
+  allUsedOrgans: string[];
   currentStageIndex: number;
   totalStages: number;
   onOrganClick?: (organ: string) => void;
   diseaseName: string;
+  currentStage: DiseaseStage;
 }
 
 // Separate component for rendering nodes inside the Canvas
@@ -21,6 +24,7 @@ function OrganNode({
   isAffected,
   color,
   diseaseName,
+  currentStage,
   onOrganClick
 }: {
   organ: string;
@@ -28,6 +32,7 @@ function OrganNode({
   isAffected: boolean;
   color: string;
   diseaseName: string;
+  currentStage: DiseaseStage;
   onOrganClick?: (organ: string) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -49,13 +54,8 @@ function OrganNode({
   });
 
   return (
-    <mesh
-      ref={meshRef}
+    <group
       position={position}
-      onClick={(e) => {
-        e.stopPropagation();
-        onOrganClick?.(organ);
-      }}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
@@ -64,43 +64,108 @@ function OrganNode({
         e.stopPropagation();
         setHovered(false);
       }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOrganClick?.(organ);
+      }}
     >
-      <sphereGeometry args={[isAffected ? 8 : 4, 32, 32]} />
-      <meshStandardMaterial
-        ref={materialRef}
-        color={color}
-        emissive={color}
-        emissiveIntensity={isAffected ? 0.5 : 0.3}
-        transparent
-        opacity={isAffected ? 0.9 : 0.5}
-      />
+      {/* Visual Mesh */}
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[isAffected ? 8 : 4, 32, 32]} />
+        <meshStandardMaterial
+          ref={materialRef}
+          color={color}
+          emissive={color}
+          emissiveIntensity={isAffected ? 0.5 : 0.3}
+          transparent
+          opacity={isAffected ? 0.9 : 0.5}
+        />
+      </mesh>
+
+      {/* Larger Invisible Hit Area for easier hovering */}
+      <mesh>
+        <sphereGeometry args={[isAffected ? 32 : 24, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
       
       {hovered && (
-        <Html distanceFactor={150} zIndexRange={[100, 0]}>
-          <div className="pointer-events-none px-3 py-1.5 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-xs text-slate-200 whitespace-nowrap shadow-2xl transform -translate-x-1/2 -translate-y-[calc(100%+15px)]">
-            {`${organ.charAt(0).toUpperCase() + organ.slice(1)}: ${isAffected ? `Affected by ${diseaseName}` : "Not affected"}`}
+        <Html zIndexRange={[100, 0]}>
+          <div
+            className="pointer-events-none w-64 rounded-xl border bg-slate-950/90 p-3 text-xs shadow-[0_16px_48px_rgba(2,6,23,0.6)] backdrop-blur-md transform -translate-x-[calc(100%+15px)] translate-y-[15px]"
+            style={{
+              borderColor: isAffected ? `${color}40` : "rgba(255,255,255,0.08)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold text-white capitalize">{organ}</h4>
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ background: isAffected ? color : "#64748b" }}
+              />
+            </div>
+
+            <p className="mt-2 leading-relaxed text-slate-300">
+              {isAffected
+                ? `${diseaseName} is affecting the ${organ} during ${currentStage.timeline.toLowerCase()}.`
+                : `The ${organ} is not directly affected in this stage.`}
+            </p>
+
+            {isAffected && (
+              <>
+                <p className="mt-2 leading-relaxed text-slate-400">
+                  {currentStage.biologicalProcess}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {currentStage.symptoms.slice(0, 3).map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full border px-1.5 py-0.5 text-[10px]"
+                      style={{
+                        borderColor: `${color}50`,
+                        background: `${color}18`,
+                        color,
+                      }}
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500">
+              <span>{currentStage.name}</span>
+              <span>·</span>
+              <span>{currentStage.timeline}</span>
+            </div>
           </div>
         </Html>
       )}
-    </mesh>
+    </group>
   );
 }
 
 // Separate component for rendering nodes inside the Canvas
 function OrganNodes({
   affectedOrgans,
+  allUsedOrgans,
   getOrganColor,
   diseaseName,
+  currentStage,
   onOrganClick
 }: {
   affectedOrgans: string[];
+  allUsedOrgans: string[];
   getOrganColor: (organ: string) => string;
   diseaseName: string;
+  currentStage: DiseaseStage;
   onOrganClick?: (organ: string) => void;
 }) {
   return (
     <group>
-      {Object.entries(ORGAN_POSITIONS_3D).map(([organ, pos]) => {
+      {Object.entries(ORGAN_POSITIONS_3D)
+        .filter(([organ]) => allUsedOrgans.includes(organ))
+        .map(([organ, pos]) => {
         const isAffected = affectedOrgans.includes(organ);
         const color = getOrganColor(organ);
         const position = new THREE.Vector3(pos.x * 100, pos.y * 100, pos.z * 100);
@@ -113,6 +178,7 @@ function OrganNodes({
             isAffected={isAffected}
             color={color}
             diseaseName={diseaseName}
+            currentStage={currentStage}
             onOrganClick={onOrganClick}
           />
         );
@@ -123,10 +189,12 @@ function OrganNodes({
 
 export default function AnatomyViewer({
     affectedOrgans,
+    allUsedOrgans,
     currentStageIndex,
     totalStages,
     onOrganClick,
     diseaseName,
+    currentStage,
 }: AnatomyViewerProps) {
     const controlsRef = useRef<any>(null);
 
@@ -190,22 +258,15 @@ export default function AnatomyViewer({
         if (controlsRef.current) {
             const camera = controlsRef.current.object;
             const target = controlsRef.current.target;
-            camera.position.set(target.x, target.y, target.z + 600);
+            camera.position.set(target.x, target.y, target.z + 300);
             camera.up.set(0, 1, 0);
             controlsRef.current.update();
         }
     };
 
     return (
-        <div className="h-full w-full relative flex items-center justify-center bg-[radial-gradient(circle_at_30%_20%,#0f172a_0%,#080c14_45%,#060a12_100%)] overflow-hidden">
-            <div className="mb-5 text-center absolute top-6 left-0 right-0 z-10 pointer-events-none">
-              <h2 className="text-xl text-slate-100">Human Body Disease Progression</h2>
-              <p className="text-sm text-slate-400 mt-1">
-                Stage {currentStageIndex + 1} of {totalStages}
-              </p>
-            </div>
-
-            <Canvas camera={{ position: [0, 0, 600], fov: 45 }} className="w-full h-full">
+        <div className="h-full w-full relative flex items-center justify-center overflow-hidden">
+            <Canvas camera={{ position: [0, 0, 300], fov: 45 }} className="w-full h-full" gl={{ alpha: true }} style={{ background: 'transparent' }}>
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[5, 5, 5]} />
             
@@ -221,37 +282,38 @@ export default function AnatomyViewer({
 
                 <OrganNodes 
                     affectedOrgans={affectedOrgans}
+                    allUsedOrgans={allUsedOrgans}
                     getOrganColor={getOrganColor}
                     diseaseName={diseaseName}
+                    currentStage={currentStage}
                     onOrganClick={onOrganClick}
                 />
 
                 <OrbitControls ref={controlsRef} />
             </Canvas>
 
-            <div className="mt-5 flex items-center justify-center gap-5 text-xs text-slate-300 absolute bottom-6 left-0 right-0 z-10 pointer-events-none">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />Early</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" />Progressive</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />Severe</span>
-            </div>
-
             {/* Interactive Controls Overlay */}
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3 p-2 bg-slate-900/40 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg pointer-events-auto">
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3 pointer-events-auto">
+                {/* Severity Legend */}
+                <div className="flex flex-col items-center gap-1.5 mb-1 bg-white/90 rounded-xl px-3 py-2 shadow-sm border border-slate-200/80">
+                  <span className="flex items-center gap-1.5 text-xs text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />Early</span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" />Progressive</span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />Severe</span>
+                </div>
+
                 <div className="grid grid-cols-3 gap-1">
                     <div />
-                    <button onClick={() => handleRotate(0, -0.2)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Up"><ChevronUp size={18} /></button>
+                    <button onClick={() => handleRotate(0, -0.2)} className="p-1.5 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors shadow-sm border border-slate-200/80" title="Rotate Up"><ChevronUp size={18} /></button>
                     <div />
-                    <button onClick={() => handleRotate(-0.2, 0)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Left"><ChevronLeft size={18} /></button>
-                    <button onClick={() => handleRotate(0, 0.2)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Down"><ChevronDown size={18} /></button>
-                    <button onClick={() => handleRotate(0.2, 0)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Right"><ChevronRight size={18} /></button>
+                    <button onClick={() => handleRotate(-0.2, 0)} className="p-1.5 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors shadow-sm border border-slate-200/80" title="Rotate Left"><ChevronLeft size={18} /></button>
+                    <button onClick={() => handleRotate(0, 0.2)} className="p-1.5 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors shadow-sm border border-slate-200/80" title="Rotate Down"><ChevronDown size={18} /></button>
+                    <button onClick={() => handleRotate(0.2, 0)} className="p-1.5 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors shadow-sm border border-slate-200/80" title="Rotate Right"><ChevronRight size={18} /></button>
                 </div>
                 
-                <div className="h-px bg-white/10 w-full" />
-                
                 <div className="flex flex-col gap-1 w-full">
-                    <button onClick={handleZoomIn} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm" title="Zoom In"><ZoomIn size={18} /></button>
-                    <button onClick={handleZoomOut} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm" title="Zoom Out"><ZoomOut size={18} /></button>
-                    <button onClick={handleReset} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm relative group" title="Reset View">
+                    <button onClick={handleZoomIn} className="p-2 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors flex justify-center w-full shadow-sm border border-slate-200/80" title="Zoom In"><ZoomIn size={18} /></button>
+                    <button onClick={handleZoomOut} className="p-2 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors flex justify-center w-full shadow-sm border border-slate-200/80" title="Zoom Out"><ZoomOut size={18} /></button>
+                    <button onClick={handleReset} className="p-2 bg-white/90 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors flex justify-center w-full shadow-sm border border-slate-200/80 relative group" title="Reset View">
                         <RotateCcw size={18} />
                     </button>
                 </div>
