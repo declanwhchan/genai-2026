@@ -78,10 +78,12 @@ export function DiseaseStagePanel({
   const accent = getStageAccent(currentStageIndex, stages.length);
 
   return (
-    <div className="h-full min-w-0 flex flex-col border-l border-slate-200/80 bg-gradient-to-b from-slate-50 to-slate-100/70">
-      <div className="min-w-0 border-b border-slate-200 px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5 lg:px-6">
-        <p className="mb-1 text-xs uppercase tracking-widest text-slate-500">Disease Profile</p>
-        <h2 className="break-words text-xl font-semibold tracking-wide text-slate-900">{diseaseName}</h2>
+    <div className="h-full min-w-0 flex flex-col border-l border-slate-200/80 bg-slate-50">
+      <div className="relative min-w-0 overflow-hidden border-b border-slate-200 bg-white px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5 lg:px-6">
+        <div className="relative">
+          <p className="mb-1 text-xs uppercase tracking-widest text-slate-500">Disease Profile</p>
+          <h2 className="break-words text-xl font-semibold tracking-wide text-slate-900">{diseaseName}</h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">

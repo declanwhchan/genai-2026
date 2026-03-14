@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { Search, X, Zap, Wind, Droplets, Activity, Dna } from "lucide-react";
 import { motion, AnimatePresence } from "./motion";
 import type { Disease } from "../../types";
@@ -47,16 +47,19 @@ export function SearchPanel({
     .filter((d) => d.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    if (filteredDiseases.length !== 1) return;
+
+    e.preventDefault();
+    onSelectDisease(filteredDiseases[0]);
+  };
+
   return (
     <div className="h-full min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-slate-50 to-sky-50/50 border-r border-slate-200/80">
 
       {/* ── BRAND HEADER ── */}
-      <div className="relative px-5 pt-6 pb-5 overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-8 -left-8 w-36 h-36 rounded-full bg-cyan-200/55 blur-3xl" />
-          <div className="absolute -top-4 right-0 w-24 h-24 rounded-full bg-sky-300/35 blur-2xl" />
-        </div>
+      <div className="relative overflow-hidden bg-white px-5 pt-6 pb-5">
 
         {/* Logo row */}
         <div className="relative mb-5 flex min-w-0 items-center gap-3">
@@ -105,6 +108,7 @@ export function SearchPanel({
               placeholder="Enter Prompt..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               className="relative z-10 w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-10 pr-9 text-sm text-slate-700 placeholder-slate-400 focus:outline-none"

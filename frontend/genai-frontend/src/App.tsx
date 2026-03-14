@@ -136,20 +136,12 @@ export default function App() {
   };
 
   return (
-    <div
-      className="h-screen w-screen overflow-hidden p-1.5 text-slate-900 sm:p-2 lg:p-3"
-      style={{
-        backgroundColor: "#edf4fb",
-        backgroundImage:
-          "linear-gradient(rgba(14,116,144,0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(14,116,144,0.09) 1px, transparent 1px)",
-        backgroundSize: "30px 30px",
-      }}
-    >
+    <div className="app-grid-surface h-screen w-screen overflow-hidden p-1.5 text-slate-900 sm:p-2 lg:p-3">
       {showLanding ? (
         <LandingPage onEnter={handleEnterFromLanding} onSkip={handleSkipLanding} />
       ) : (
         <div className="grid h-full min-h-0 grid-cols-[minmax(0,0.9fr)_minmax(320px,1.8fr)_minmax(0,1fr)] gap-1.5 sm:gap-2 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.7fr)_minmax(0,1.02fr)] lg:gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.6fr)_minmax(0,1.05fr)]">
-          <aside className="min-w-0 overflow-hidden rounded-[10px] border border-slate-200/90 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[12px]">
+          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
             <SearchPanel
               diseases={DISEASES}
               onSelectDisease={handleSelectDisease}
@@ -175,7 +167,7 @@ export default function App() {
             )}
           </main>
 
-          <aside className="min-w-0 overflow-hidden rounded-[10px] border border-slate-200/90 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[12px]">
+          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
             {selectedDisease ? (
               <DiseaseStagePanel
                 stages={selectedDisease.stages}
