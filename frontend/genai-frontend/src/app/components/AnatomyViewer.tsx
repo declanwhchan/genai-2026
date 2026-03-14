@@ -4,6 +4,7 @@ import Model from "./Model.tsx";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 import { ORGAN_POSITIONS_3D } from "../../types.ts";
+import { ZoomIn, ZoomOut, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface AnatomyViewerProps {
   affectedOrgans: string[];
@@ -140,6 +141,61 @@ export default function AnatomyViewer({
         return "#ef4444";
     };
 
+    const handleZoomIn = () => {
+        if (controlsRef.current) {
+            const camera = controlsRef.current.object;
+            const target = controlsRef.current.target;
+            const dir = camera.position.clone().sub(target);
+            if (dir.length() > controlsRef.current.minDistance) {
+                dir.multiplyScalar(0.8);
+                camera.position.copy(target).add(dir);
+                controlsRef.current.update();
+            }
+        }
+    };
+
+    const handleZoomOut = () => {
+        if (controlsRef.current) {
+            const camera = controlsRef.current.object;
+            const target = controlsRef.current.target;
+            const dir = camera.position.clone().sub(target);
+            if (dir.length() < controlsRef.current.maxDistance) {
+                dir.multiplyScalar(1.2);
+                camera.position.copy(target).add(dir);
+                controlsRef.current.update();
+            }
+        }
+    };
+
+    const handleRotate = (angleX: number, angleY: number) => {
+        if (controlsRef.current) {
+            const camera = controlsRef.current.object;
+            const target = controlsRef.current.target;
+            const offset = camera.position.clone().sub(target);
+            
+            if (angleX !== 0) {
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angleX);
+            }
+            if (angleY !== 0) {
+                const axes = new THREE.Matrix4().extractRotation(camera.matrixWorld);
+                const right = new THREE.Vector3(1, 0, 0).applyMatrix4(axes).normalize();
+                offset.applyAxisAngle(right, angleY);
+            }
+            camera.position.copy(target).add(offset);
+            controlsRef.current.update();
+        }
+    };
+
+    const handleReset = () => {
+        if (controlsRef.current) {
+            const camera = controlsRef.current.object;
+            const target = controlsRef.current.target;
+            camera.position.set(target.x, target.y, target.z + 600);
+            camera.up.set(0, 1, 0);
+            controlsRef.current.update();
+        }
+    };
+
     return (
         <div className="h-full w-full relative flex items-center justify-center bg-[radial-gradient(circle_at_30%_20%,#0f172a_0%,#080c14_45%,#060a12_100%)] overflow-hidden">
             <div className="mb-5 text-center absolute top-6 left-0 right-0 z-10 pointer-events-none">
@@ -177,6 +233,28 @@ export default function AnatomyViewer({
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />Early</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" />Progressive</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />Severe</span>
+            </div>
+
+            {/* Interactive Controls Overlay */}
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-3 p-2 bg-slate-900/40 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg pointer-events-auto">
+                <div className="grid grid-cols-3 gap-1">
+                    <div />
+                    <button onClick={() => handleRotate(0, -0.2)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Up"><ChevronUp size={18} /></button>
+                    <div />
+                    <button onClick={() => handleRotate(-0.2, 0)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Left"><ChevronLeft size={18} /></button>
+                    <button onClick={() => handleRotate(0, 0.2)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Down"><ChevronDown size={18} /></button>
+                    <button onClick={() => handleRotate(0.2, 0)} className="p-1.5 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors shadow-sm" title="Rotate Right"><ChevronRight size={18} /></button>
+                </div>
+                
+                <div className="h-px bg-white/10 w-full" />
+                
+                <div className="flex flex-col gap-1 w-full">
+                    <button onClick={handleZoomIn} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm" title="Zoom In"><ZoomIn size={18} /></button>
+                    <button onClick={handleZoomOut} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm" title="Zoom Out"><ZoomOut size={18} /></button>
+                    <button onClick={handleReset} className="p-2 bg-white/5 hover:bg-white/20 hover:text-cyan-300 text-slate-300 rounded-lg transition-colors flex justify-center w-full shadow-sm relative group" title="Reset View">
+                        <RotateCcw size={18} />
+                    </button>
+                </div>
             </div>
         </div>
     );
