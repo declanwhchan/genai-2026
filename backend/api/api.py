@@ -59,11 +59,6 @@ def get_watsonx_model():
     )
 
 # --- ROUTES ---
-
-@app.route('/api/hello')
-def hello_world():
-    return jsonify({"message": "Hello from the Flask Backend!"})
-
 @app.route('/api/ai', methods=['POST'])
 def ai_completion():
     """
