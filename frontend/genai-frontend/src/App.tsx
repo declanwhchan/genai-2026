@@ -35,7 +35,6 @@ Rules:
 - Return 3 to 5 stages when possible.
 - If a reference document is supplied by the system, use it as the primary source.
 - Mark document-backed content with sourceBasis="document".
-- If a reference document is supplied by the system, at least 2 stages must be directly grounded in that context and marked sourceBasis="document".
 - Only mark sourceBasis="llm" when you are filling in information not directly supported by the document.
 - affectedOrgans must only use keys from this list:
 ["brain","spinal_cord","eyes","ears","nose","tonsils","throat","trachea","esophagus","thyroid","lymph_nodes","lungs","heart","diaphragm","liver","gallbladder","stomach","spleen","pancreas","adrenal_glands","kidneys","appendix","small_intestine","intestines","colon","large_intestine","rectum","bladder","urethra","uterus","ovaries","testes","prostate","skin","blood","immune","muscles","nerves","feet"]
@@ -80,6 +79,15 @@ const ORGAN_ALIASES: Record<string, string> = {
   adrenal_gland: "adrenal_glands",
 };
 
+const SEARCH_VARIANTS: Record<string, string[]> = {
+  hepatitis: [
+    "Hepatitis A",
+    "Hepatitis B",
+    "Hepatitis C",
+    "Hepatitis D",
+    "Hepatitis E",
+  ],
+};
 
 function slugify(value: string) {
   return value
@@ -142,7 +150,7 @@ function dedupeDiseases(diseases: Disease[]): Disease[] {
 }
 
 function getRelatedPrompts(prompt: string): string[] {
-  return [prompt];
+  return SEARCH_VARIANTS[prompt.trim().toLowerCase()] ?? [prompt];
 }
 
 function dedupePromptTerms(prompts: string[]): string[] {
