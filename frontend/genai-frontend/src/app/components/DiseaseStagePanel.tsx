@@ -1,12 +1,14 @@
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "./motion";
-import type { DiseaseStage } from "../../types";
+import type { DiseaseSourceSummary, DiseaseStage } from "../../types";
 
 interface DiseaseStagePanelProps {
   stages: DiseaseStage[];
   currentStageIndex: number;
   onStageSelect: (index: number) => void;
   diseaseName: string;
+  sourceSummary?: DiseaseSourceSummary;
+  onAffectedOrganHover?: (organ: string | null) => void;
 }
 
 interface StageAccent {
@@ -16,25 +18,6 @@ interface StageAccent {
   soft: string;
   softHover: string;
 }
-
-const RELIABLE_SOURCES: Record<string, Array<{ label: string; href: string }>> = {
-  "COVID-19": [
-    { label: "WHO - COVID-19", href: "https://www.who.int/health-topics/coronavirus" },
-    { label: "CDC - COVID-19", href: "https://www.cdc.gov/covid/" },
-  ],
-  "Type 2 Diabetes": [
-    { label: "CDC - Type 2 Diabetes", href: "https://www.cdc.gov/diabetes/about/about-type-2-diabetes.html" },
-    { label: "NIH - NIDDK", href: "https://www.niddk.nih.gov/health-information/diabetes/overview/what-is-diabetes/type-2-diabetes" },
-  ],
-  "Influenza (Flu)": [
-    { label: "CDC - Influenza", href: "https://www.cdc.gov/flu/" },
-    { label: "WHO - Influenza", href: "https://www.who.int/news-room/fact-sheets/detail/influenza-(seasonal)" },
-  ],
-  Pneumonia: [
-    { label: "NHS - Pneumonia", href: "https://www.nhs.uk/conditions/pneumonia/" },
-    { label: "Mayo Clinic - Pneumonia", href: "https://www.mayoclinic.org/diseases-conditions/pneumonia/symptoms-causes/syc-20354204" },
-  ],
-};
 
 const STAGE_ACCENTS: StageAccent[] = [
   {
@@ -60,7 +43,11 @@ const STAGE_ACCENTS: StageAccent[] = [
   },
 ];
 
-function getStageAccent(currentStageIndex: number, totalStages: number): StageAccent {
+
+function getStageAccent(
+  currentStageIndex: number,
+  totalStages: number
+): StageAccent {
   const intensity = totalStages <= 1 ? 1 : currentStageIndex / (totalStages - 1);
   if (intensity < 0.4) return STAGE_ACCENTS[0];
   if (intensity < 0.75) return STAGE_ACCENTS[1];
@@ -72,23 +59,30 @@ export function DiseaseStagePanel({
   currentStageIndex,
   onStageSelect,
   diseaseName,
+  sourceSummary,
+  onAffectedOrganHover,
 }: DiseaseStagePanelProps) {
   const currentStage = stages[currentStageIndex];
-  const trustedSources = RELIABLE_SOURCES[diseaseName] ?? [];
   const accent = getStageAccent(currentStageIndex, stages.length);
 
   return (
-    <div className="h-full min-w-0 flex flex-col border-l border-slate-200/80 bg-slate-50">
-      <div className="relative min-w-0 overflow-hidden border-b border-slate-200 bg-white px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5 lg:px-6">
+    <div className="flex h-full min-w-0 flex-col border-l border-slate-200/80 bg-white">
+      <div className="relative min-w-0 overflow-hidden border-b border-slate-200 bg-white px-4 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-6 lg:px-6">
         <div className="relative">
-          <p className="mb-1 text-xs uppercase tracking-widest text-slate-500">Disease Profile</p>
-          <h2 className="break-words text-xl font-semibold tracking-wide text-slate-900">{diseaseName}</h2>
+          <p className="mb-1 text-xs uppercase tracking-widest text-slate-500">
+            Disease Profile
+          </p>
+          <h2 className="break-words text-xl font-semibold tracking-wide text-slate-900">
+            {diseaseName}
+          </h2>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
+      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
         <div className="rounded-2xl border border-slate-200 bg-white/82 p-3 sm:p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Stage Selector</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Stage Selector
+          </p>
           <div
             className="relative grid rounded-full border border-slate-200 bg-white p-1"
             style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
@@ -132,7 +126,9 @@ export function DiseaseStagePanel({
 
         <div className="rounded-2xl border border-slate-200 bg-white/86 p-4">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-slate-900">{currentStage.name}</h3>
+            <h3 className="text-base font-semibold text-slate-900">
+              {currentStage.name}
+            </h3>
             <span
               className="rounded-full border px-2.5 py-1 text-xs"
               style={{
@@ -147,24 +143,32 @@ export function DiseaseStagePanel({
 
           {currentStage.symptoms.length > 0 && (
             <div className="mb-3">
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Key Symptoms</p>
-              <p className="text-sm text-slate-700">{currentStage.symptoms.slice(0, 4).join(" • ")}</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Key Symptoms
+              </p>
+              <p className="text-sm text-slate-700">
+                {currentStage.symptoms.slice(0, 4).join(", ")}
+              </p>
             </div>
           )}
 
           {currentStage.affectedOrgans.length > 0 && (
             <div className="mb-3">
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Affected Organs</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Affected Organs
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {currentStage.affectedOrgans.map((organ) => (
                   <span
                     key={organ}
-                    className="rounded-full border px-2.5 py-1 text-xs capitalize"
+                    className="rounded-full border px-2.5 py-1 text-xs capitalize transition-colors"
                     style={{
                       borderColor: accent.border,
                       background: accent.soft,
                       color: accent.text,
                     }}
+                    onMouseEnter={() => onAffectedOrganHover?.(organ)}
+                    onMouseLeave={() => onAffectedOrganHover?.(null)}
                   >
                     {organ}
                   </span>
@@ -174,27 +178,53 @@ export function DiseaseStagePanel({
           )}
 
           <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Stage Summary</p>
-            <p className="break-words text-sm leading-relaxed text-slate-600">{currentStage.biologicalProcess}</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Stage Summary
+            </p>
+            <p className="break-words text-sm leading-relaxed text-slate-600">
+              {currentStage.biologicalProcess}
+            </p>
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white/86 p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Explore More (Trusted)</p>
-          <div className="space-y-2">
-            {trustedSources.map((source) => (
-              <a
-                key={source.href}
-                href={source.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                <span>{source.label}</span>
-                <ExternalLink size={14} className="text-slate-500" />
-              </a>
-            ))}
-          </div>
+          {(currentStage.sourceBasis || currentStage.sourceNote || sourceSummary) && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Evidence Basis
+              </p>
+              <div className="space-y-2 text-sm text-slate-600">
+                {sourceSummary?.primarySourceType && !sourceSummary?.documentName && (
+                  <p>
+                    <span className="font-medium text-slate-700">Overall source:</span>{" "}
+                    {sourceSummary.primarySourceType === "document"
+                      ? "Document-backed"
+                      : sourceSummary.primarySourceType === "mixed"
+                        ? "Mixed document + model"
+                        : "LLM-generated"}
+                  </p>
+                )}
+                {sourceSummary?.documentName && (
+                  <p>
+                    <span className="font-medium text-slate-700">Document:</span>{" "}
+                    {sourceSummary.documentName}
+                  </p>
+                )}
+                {sourceSummary?.note && (
+                  <p className="leading-relaxed">{sourceSummary.note}</p>
+                )}
+                {currentStage.sourceBasis && (
+                  <p>
+                    <span className="font-medium text-slate-700">Current stage:</span>{" "}
+                    {currentStage.sourceBasis === "document"
+                      ? "Derived from the reference document"
+                      : "Filled in by model reasoning"}
+                  </p>
+                )}
+                {currentStage.sourceNote && (
+                  <p className="leading-relaxed">{currentStage.sourceNote}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -202,14 +232,14 @@ export function DiseaseStagePanel({
         <button
           onClick={() => onStageSelect(Math.max(0, currentStageIndex - 1))}
           disabled={currentStageIndex === 0}
-          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition-all hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-white/80"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition-all hover:border-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft size={16} /> Prev Stage
         </button>
         <button
           onClick={() => onStageSelect(Math.min(stages.length - 1, currentStageIndex + 1))}
           disabled={currentStageIndex === stages.length - 1}
-          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-700 hover:border-cyan-700 disabled:hover:bg-cyan-600 disabled:hover:border-cyan-600"
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all hover:border-cyan-700 hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-cyan-600 disabled:hover:bg-cyan-600"
         >
           Next Stage <ChevronRight size={16} />
         </button>
@@ -217,3 +247,6 @@ export function DiseaseStagePanel({
     </div>
   );
 }
+
+
+

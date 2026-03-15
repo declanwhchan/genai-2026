@@ -1,0 +1,17 @@
+# Ignore environment files containing secrets
+.env
+
+# Python virtual environment
+venv/
+
+# Bytecode
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+

@@ -1,62 +1,107 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Search } from "lucide-react";
 
 interface LandingPageProps {
-  onEnter: (prompt: string) => void;
+  onEnter: (prompt: string) => void | Promise<void>;
   onSkip: () => void;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
 }
 
-export function LandingPage({ onEnter, onSkip }: LandingPageProps) {
+const LOADING_DOTS = [".", "..", "..."];
+
+export function LandingPage({
+  onEnter,
+  onSkip,
+  isSubmitting = false,
+  errorMessage = null,
+}: LandingPageProps) {
   const [prompt, setPrompt] = useState("");
+  const [loadingFrameIndex, setLoadingFrameIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setLoadingFrameIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setLoadingFrameIndex((currentIndex) => (currentIndex + 1) % LOADING_DOTS.length);
+    }, 260);
+
+    return () => window.clearInterval(intervalId);
+  }, [isSubmitting]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onEnter(prompt.trim());
+    void onEnter(prompt.trim());
   };
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-transparent p-4" style={{ fontFamily: "var(--font-landing-body)" }}>
-      <div className="w-full max-w-2xl text-center">
-        <p className="text-sm font-semibold uppercase tracking-widest text-cyan-600">PathoQuery</p>
-        <h1
-          className="mt-4 text-5xl font-semibold tracking-tight text-slate-900 sm:text-6xl"
-          style={{ fontFamily: "var(--font-landing-display)", letterSpacing: "-0.02em" }}
-        >
-          Disease Progression Explorer
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-slate-600">
-          Enter a prompt to explore how a disease affects the human body, stage-by-stage.
-        </p>
+    <div
+      className="relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden bg-transparent p-4"
+      style={{ fontFamily: "var(--font-landing-body)" }}
+    >
+      <div className="relative w-full max-w-3xl rounded-[20px] border border-white/70 bg-white/72 px-6 py-10 text-center shadow-[0_30px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:px-10 sm:py-14">
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-[linear-gradient(to_right,rgba(8,145,178,0),rgba(8,145,178,0.9),rgba(8,145,178,0))]" />
+        <div className="mx-auto max-w-2xl">
+          <h1
+            className="mt-5 text-5xl font-semibold tracking-[-0.045em] text-slate-900 sm:text-6xl"
+            style={{ fontFamily: "var(--font-landing-display)" }}
+          >
+            PathoQuery
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+            Enter a prompt to explore how a disease affects the human body and organs, stage-by-stage.
+          </p>
 
-        <form onSubmit={handleSubmit} className="mt-10">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-              <Search size={20} />
+          <form onSubmit={handleSubmit} className="mt-10">
+            <div className="relative rounded-[28px] border border-cyan-100/80 bg-white/90 p-2 shadow-[0_18px_40px_rgba(8,145,178,0.08)]">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-6 text-cyan-700">
+                <Search size={20} />
+              </div>
+              <input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="e.g. COVID-19, Type-2 Diabetes, Pneumonia..."
+                disabled={isSubmitting}
+                className="h-16 w-full rounded-[22px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fcff_100%)] py-3 pl-14 pr-36 text-lg text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="absolute inset-y-2 right-2 flex min-w-[11rem] items-center justify-center gap-2 rounded-[20px] border border-cyan-600 bg-cyan-600 px-6 text-lg font-semibold text-white transition-all hover:border-cyan-700 hover:bg-cyan-700 disabled:cursor-not-allowed disabled:border-cyan-500 disabled:bg-cyan-500"
+              >
+                {isSubmitting ? (
+                  <span className="inline-flex items-baseline">
+                    <span>Loading</span>
+                    <span className="inline-block w-[1.5em] text-left">
+                      {LOADING_DOTS[loadingFrameIndex]}
+                    </span>
+                  </span>
+                ) : (
+                  "Enter"
+                )}{" "}
+                <ArrowRight size={20} />
+              </button>
             </div>
-            <input
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. COVID-19, Type-2 Diabetes, Pneumonia..."
-              className="h-14 w-full rounded-full border border-slate-300 bg-white py-3 pl-12 pr-32 text-lg text-slate-800 placeholder-slate-400 shadow-sm transition-all duration-200 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-            />
+          </form>
+
+          {errorMessage && (
+            <p className="mt-4 text-sm text-rose-600">{errorMessage}</p>
+          )}
+
+          <div className="mt-8">
             <button
-              type="submit"
-              className="absolute inset-y-0 right-0 flex items-center gap-2 rounded-full bg-cyan-600 px-6 text-lg font-semibold text-white transition-all hover:bg-cyan-700"
+              type="button"
+              onClick={onSkip}
+              disabled={isSubmitting}
+              className="inline-flex items-center rounded-full border border-cyan-200 bg-white/70 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-all hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Enter <ArrowRight size={20} />
+              Go To Main Page
             </button>
           </div>
-        </form>
-
-        <div className="mt-8">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm font-medium text-slate-600 transition-all hover:text-cyan-600"
-          >
-            Go To Main Page
-          </button>
         </div>
       </div>
     </div>

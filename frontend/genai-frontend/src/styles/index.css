@@ -83,14 +83,7 @@ body {
     pointer-events: none;
     transform: translate3d(-100px, -100px, 0);
     opacity: 0;
-    transition:
-      width 45ms linear,
-      height 45ms linear,
-      border-radius 50ms linear,
-      background 60ms linear,
-      opacity 50ms linear,
-      box-shadow 60ms linear,
-      border-color 60ms linear;
+    transition: none;
   }
 
   .app-cursor::before {
@@ -104,7 +97,7 @@ body {
     border-right: 5px solid transparent;
     transform: rotate(-10deg);
     filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.25));
-    transition: transform 45ms linear, filter 45ms linear;
+    transition: none;
   }
 
   body.cursor-visible .app-cursor {
