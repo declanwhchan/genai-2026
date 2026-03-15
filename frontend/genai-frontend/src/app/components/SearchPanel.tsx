@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "./motion";
 import type { Disease } from "../../types";
@@ -9,6 +9,9 @@ interface SearchPanelProps {
   selectedDisease: Disease | null;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  onSearchSubmit: (term: string) => void | Promise<void>;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
 }
 
 const SELECTED_CARD = {
@@ -16,25 +19,59 @@ const SELECTED_CARD = {
   accent: "#0e7490",
 };
 
+const SEARCHING_FRAMES = ["Searching.", "Searching..", "Searching..."];
+
 export function SearchPanel({
   diseases,
   onSelectDisease,
   selectedDisease,
   searchTerm,
   onSearchChange,
+  onSearchSubmit,
+  isSubmitting = false,
+  errorMessage = null,
 }: SearchPanelProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const [searchingFrameIndex, setSearchingFrameIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setSearchingFrameIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setSearchingFrameIndex((currentIndex) =>
+        (currentIndex + 1) % SEARCHING_FRAMES.length
+      );
+    }, 260);
+
+    return () => window.clearInterval(intervalId);
+  }, [isSubmitting]);
+
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
   const filteredDiseases = [...diseases]
-    .filter((d) => d.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((disease) => {
+      if (!normalizedSearchTerm) return true;
+
+      return [disease.name, ...(disease.searchAliases ?? [])].some((value) =>
+        value.toLowerCase().includes(normalizedSearchTerm)
+      );
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
-    if (filteredDiseases.length !== 1) return;
 
     e.preventDefault();
-    onSelectDisease(filteredDiseases[0]);
+
+    if (filteredDiseases.length === 1) {
+      onSelectDisease(filteredDiseases[0]);
+      return;
+    }
+
+    void onSearchSubmit(searchTerm);
   };
 
   return (
@@ -78,7 +115,8 @@ export function SearchPanel({
               onKeyDown={handleSearchKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              className="relative z-10 w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-10 pr-9 text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
+              disabled={isSubmitting}
+              className="relative z-10 w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-10 pr-9 text-sm text-slate-700 placeholder-slate-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
               style={{ background: "rgba(255,255,255,0.9)" }}
             />
             <AnimatePresence>
@@ -98,9 +136,19 @@ export function SearchPanel({
         </motion.div>
       </div>
 
+      {errorMessage && (
+        <div className="px-5 pb-2">
+          <p className="text-xs text-rose-600">{errorMessage}</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between px-5 pb-2">
         <span className="text-xs uppercase tracking-widest text-slate-500">
-          {searchTerm ? `${filteredDiseases.length} found` : "Conditions"}
+          {isSubmitting
+            ? SEARCHING_FRAMES[searchingFrameIndex]
+            : searchTerm
+              ? `${filteredDiseases.length} found`
+              : "Conditions"}
         </span>
         <span className="text-xs text-slate-500">{diseases.length} total</span>
       </div>

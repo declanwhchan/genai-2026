@@ -1,3 +1,13 @@
+export type DiseaseSourceType = "document" | "mixed" | "llm";
+export type StageSourceBasis = "document" | "llm";
+
+export interface DiseaseSourceSummary {
+  documentName?: string | null;
+  primarySourceType?: DiseaseSourceType;
+  note?: string;
+}
+
+
 export interface DiseaseStage {
   id: string;
   name: string;
@@ -5,12 +15,16 @@ export interface DiseaseStage {
   affectedOrgans: string[];
   symptoms: string[];
   biologicalProcess: string;
+  sourceBasis?: StageSourceBasis;
+  sourceNote?: string;
 }
 
 export interface Disease {
   id: string;
   name: string;
   stages: DiseaseStage[];
+  sourceSummary?: DiseaseSourceSummary;
+  searchAliases?: string[];
 }
 
 export const DISEASES: Disease[] = [
@@ -126,13 +140,13 @@ export const ORGAN_POSITIONS: Record<string, { x: number; y: number }> = {
   intestines: { x: 50, y: 60 },
   colon: { x: 50, y: 63 },
   large_intestine: { x: 50, y: 63 },
-  rectum: { x: 50, y: 73 },
-  bladder: { x: 50, y: 77 },
-  urethra: { x: 50, y: 83 },
-  uterus: { x: 50, y: 80 },
-  ovaries: { x: 47, y: 79 },
-  testes: { x: 50, y: 86 },
-  prostate: { x: 50, y: 81 },
+  rectum: { x: 50, y: 65 },
+  bladder: { x: 50, y: 66 },
+  urethra: { x: 50, y: 67 },
+  uterus: { x: 50, y: 68 },
+  ovaries: { x: 47, y: 69 },
+  testes: { x: 50, y: 69 },
+  prostate: { x: 50, y: 70 },
   skin: { x: 30, y: 30 },
   blood: { x: 50, y: 70 },
   immune: { x: 50, y: 75 },
@@ -142,22 +156,6 @@ export const ORGAN_POSITIONS: Record<string, { x: number; y: number }> = {
 };
 
 export const ORGAN_POSITIONS_3D: Record<string, { x: number; y: number; z: number }> = {
-  brain: { x: 0, y: 1.6, z: 0 },
-  eyes: { x: 0, y: 1.5, z: 0.15 },
-  nose: { x: 0, y: 1.4, z: 0.15 },
-  throat: { x: 0, y: 1.2, z: 0 },
-  lungs: { x: 0.25, y: 0.6, z: 0 },
-  heart: { x: -0.1, y: 0.5, z: 0.1 },
-  liver: { x: 0.3, y: 0.2, z: 0.1 },
-  pancreas: { x: -0.2, y: 0.1, z: 0.15 },
-  stomach: { x: 0, y: 0.15, z: 0.2 },
-  kidneys: { x: 0.25, y: 0, z: -0.15 },
-  intestines: { x: 0, y: -0.3, z: 0.1 },
-  blood: { x: 0, y: 0.3, z: -0.2 },
-  immune: { x: 0, y: 0.8, z: -0.2 },
-  muscles: { x: 0.4, y: 0.3, z: 0 },
-  nerves: { x: 0, y: 0.5, z: -0.25 },
-  feet: { x: 0, y: -1.6, z: 0 },
   brain: { x: 0, y: 0.85, z: -0.02 },
   spinal_cord: { x: 0, y: 0.42, z: -0.12 },
   eyes: { x: 0, y: 0.82, z: 0.08 },
@@ -198,3 +196,7 @@ export const ORGAN_POSITIONS_3D: Record<string, { x: number; y: number; z: numbe
   nerves: { x: -0.1, y: 0.6, z: -0.02 },
   feet: { x: -0.15, y: -0.85, z: 0 }
 };
+
+
+
+

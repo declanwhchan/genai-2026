@@ -1,12 +1,13 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "./motion";
-import type { DiseaseStage } from "../../types";
+import type { DiseaseSourceSummary, DiseaseStage } from "../../types";
 
 interface DiseaseStagePanelProps {
   stages: DiseaseStage[];
   currentStageIndex: number;
   onStageSelect: (index: number) => void;
   diseaseName: string;
+  sourceSummary?: DiseaseSourceSummary;
   onAffectedOrganHover?: (organ: string | null) => void;
 }
 
@@ -42,6 +43,7 @@ const STAGE_ACCENTS: StageAccent[] = [
   },
 ];
 
+
 function getStageAccent(
   currentStageIndex: number,
   totalStages: number
@@ -57,6 +59,7 @@ export function DiseaseStagePanel({
   currentStageIndex,
   onStageSelect,
   diseaseName,
+  sourceSummary,
   onAffectedOrganHover,
 }: DiseaseStagePanelProps) {
   const currentStage = stages[currentStageIndex];
@@ -182,6 +185,46 @@ export function DiseaseStagePanel({
               {currentStage.biologicalProcess}
             </p>
           </div>
+
+          {(currentStage.sourceBasis || currentStage.sourceNote || sourceSummary) && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Evidence Basis
+              </p>
+              <div className="space-y-2 text-sm text-slate-600">
+                {sourceSummary?.primarySourceType && (
+                  <p>
+                    <span className="font-medium text-slate-700">Overall source:</span>{" "}
+                    {sourceSummary.primarySourceType === "document"
+                      ? "Document-backed"
+                      : sourceSummary.primarySourceType === "mixed"
+                        ? "Mixed document + model"
+                        : "LLM-generated"}
+                  </p>
+                )}
+                {sourceSummary?.documentName && (
+                  <p>
+                    <span className="font-medium text-slate-700">Document:</span>{" "}
+                    {sourceSummary.documentName}
+                  </p>
+                )}
+                {sourceSummary?.note && (
+                  <p className="leading-relaxed">{sourceSummary.note}</p>
+                )}
+                {currentStage.sourceBasis && (
+                  <p>
+                    <span className="font-medium text-slate-700">Current stage:</span>{" "}
+                    {currentStage.sourceBasis === "document"
+                      ? "Derived from the reference document"
+                      : "Filled in by model reasoning"}
+                  </p>
+                )}
+                {currentStage.sourceNote && (
+                  <p className="leading-relaxed">{currentStage.sourceNote}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -196,7 +239,6 @@ export function DiseaseStagePanel({
         <button
           onClick={() => onStageSelect(Math.min(stages.length - 1, currentStageIndex + 1))}
           disabled={currentStageIndex === stages.length - 1}
-          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-cyan-700 hover:border-cyan-700"
           className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-600 bg-cyan-600 text-white transition-all hover:border-cyan-700 hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-cyan-600 disabled:hover:bg-cyan-600"
         >
           Next Stage <ChevronRight size={16} />
@@ -205,3 +247,6 @@ export function DiseaseStagePanel({
     </div>
   );
 }
+
+
+
