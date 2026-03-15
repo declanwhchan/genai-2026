@@ -1,6 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap");
 
 :root {
-	--font-landing-display: "Sora", "Trebuchet MS", "Segoe UI", sans-serif;
-	--font-landing-body: "Manrope", "Segoe UI", sans-serif;
+	--font-ui: "Open Sans", "Segoe UI", Arial, sans-serif;
+	--font-landing-display: "Open Sans", "Segoe UI", Arial, sans-serif;
+	--font-landing-body: "Open Sans", "Segoe UI", Arial, sans-serif;
 }

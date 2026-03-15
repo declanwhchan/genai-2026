@@ -51,11 +51,13 @@ export function HumanBody3D({
 }: HumanBody3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [rotation, setRotation] = useState({ x: 0.15, y: 0.2 });
+  const [rotation, setRotation] = useState({ x: 0.15, y: -0.785 });
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredOrgan, setHoveredOrgan] = useState<HoverInfo | null>(null);
   const hoveredOrganRef = useRef<HoverInfo | null>(null);
+  const hoverPanelRef = useRef<HTMLDivElement>(null);
   const mousePosRef = useRef({ x: -1, y: -1 });
+  const [cursorPos, setCursorPos] = useState({ x: -1, y: -1 });
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const animationFrameRef = useRef<number | null>(null);
@@ -307,7 +309,7 @@ export function HumanBody3D({
         const dx = mousePosRef.current.x - p.x;
         const dy = mousePosRef.current.y - p.y;
 
-        if (isAffected && dx * dx + dy * dy < r * r) {
+        if (dx * dx + dy * dy < r * r) {
           foundHover = { name: organ, x: p.x, y: p.y };
         }
 
@@ -385,6 +387,11 @@ export function HumanBody3D({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const nextCursorPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    mousePosRef.current = nextCursorPos;
+    setCursorPos(nextCursorPos);
+
     if (isDragging) {
       const dx = e.clientX - lastMouse.x;
       const dy = e.clientY - lastMouse.y;
@@ -404,7 +411,7 @@ export function HumanBody3D({
   };
 
   const resetView = () => {
-    setRotation({ x: 0.15, y: 0.2 });
+    setRotation({ x: 0.15, y: -0.785 });
     setScale(1);
   };
 
@@ -420,27 +427,49 @@ export function HumanBody3D({
     }
 
     const rect = containerRef.current.getBoundingClientRect();
-    const controlGutter = 82;
-    const panelWidth = Math.min(330, Math.max(240, rect.width - 28 - controlGutter));
-    const panelHeight = 240;
-    const edgePadding = 12;
+    const controlGutter = 96;
+    const edgePadding = 32;
+    const horizontalOffset = 26;
+    const verticalOffset = 26;
+    const measuredWidth = hoverPanelRef.current?.offsetWidth ?? 330;
+    const measuredHeight = hoverPanelRef.current?.offsetHeight ?? 320;
+    const panelWidth = Math.min(measuredWidth, Math.max(220, rect.width - edgePadding * 2 - controlGutter));
+    const panelHeight = measuredHeight;
+    const cursorX = cursorPos.x >= 0 ? cursorPos.x : hoveredOrgan.x;
+    const cursorY = cursorPos.y >= 0 ? cursorPos.y : hoveredOrgan.y;
+    const placeLeftOfCursor = cursorX >= rect.width / 2;
+    const placeAboveCursor = cursorY >= rect.height / 2;
+    const safeRightInset = edgePadding + controlGutter;
+    const maxLeft = Math.max(edgePadding, rect.width - panelWidth - safeRightInset);
+    const maxTop = Math.max(edgePadding, rect.height - panelHeight - edgePadding);
 
-    let left = hoveredOrgan.x + 26;
-    let top = hoveredOrgan.y - 18;
+    let left = placeLeftOfCursor
+      ? cursorX - panelWidth - horizontalOffset
+      : cursorX + horizontalOffset;
+    let top = placeAboveCursor
+      ? cursorY - panelHeight - verticalOffset
+      : cursorY + verticalOffset;
 
-    const maxLeft = Math.max(edgePadding, rect.width - panelWidth - edgePadding - controlGutter);
+    if (placeLeftOfCursor && left < edgePadding) {
+      left = edgePadding;
+    } else if (!placeLeftOfCursor && left > maxLeft) {
+      left = maxLeft;
+    }
 
-    if (left > maxLeft) {
-      left = hoveredOrgan.x - panelWidth - 26;
+    if (placeAboveCursor && top < edgePadding) {
+      top = edgePadding;
+    } else if (!placeAboveCursor && top > maxTop) {
+      top = maxTop;
     }
 
     left = Math.max(edgePadding, Math.min(left, maxLeft));
-    top = Math.max(edgePadding, Math.min(top, rect.height - panelHeight - edgePadding));
+    top = Math.max(edgePadding, Math.min(top, maxTop));
 
     return {
       left,
       top,
       width: panelWidth,
+      maxWidth: panelWidth,
     };
   })();
 
@@ -454,10 +483,13 @@ export function HumanBody3D({
         }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+          const nextCursorPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+          mousePosRef.current = nextCursorPos;
+          setCursorPos(nextCursorPos);
         }}
         onMouseLeave={() => {
           mousePosRef.current = { x: -1, y: -1 };
+          setCursorPos({ x: -1, y: -1 });
           hoveredOrganRef.current = null;
           setHoveredOrgan(null);
           setIsDragging(false);
@@ -477,6 +509,7 @@ export function HumanBody3D({
       </div>
 
       <div
+        ref={hoverPanelRef}
         className={`pointer-events-none absolute z-40 rounded-2xl border bg-white/95 p-4 text-sm shadow-[0_20px_50px_rgba(15,23,42,0.16)] backdrop-blur-md transition-all duration-300 ${
           hoveredOrgan ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"
         }`}
@@ -583,6 +616,9 @@ export function HumanBody3D({
     </div>
   );
 }
+
+
+
 
 
 
