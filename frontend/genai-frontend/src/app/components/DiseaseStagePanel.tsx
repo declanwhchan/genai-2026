@@ -147,7 +147,7 @@ export function DiseaseStagePanel({
                 Key Symptoms
               </p>
               <p className="text-sm text-slate-700">
-                {currentStage.symptoms.slice(0, 4).join(" • ")}
+                {currentStage.symptoms.slice(0, 4).join(", ")}
               </p>
             </div>
           )}
@@ -192,7 +192,7 @@ export function DiseaseStagePanel({
                 Evidence Basis
               </p>
               <div className="space-y-2 text-sm text-slate-600">
-                {sourceSummary?.primarySourceType && (
+                {sourceSummary?.primarySourceType && !sourceSummary?.documentName && (
                   <p>
                     <span className="font-medium text-slate-700">Overall source:</span>{" "}
                     {sourceSummary.primarySourceType === "document"

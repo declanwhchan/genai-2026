@@ -35,6 +35,8 @@ Rules:
 - Return 3 to 5 stages when possible.
 - If a reference document is supplied by the system, use it as the primary source.
 - Mark document-backed content with sourceBasis="document".
+- Prioritize the compiled virus research vector database above all other sources whenever that context is supplied.
+- For viral diseases, include the compiled virus research vector database in sourceSummary.documentName when that context is available.
 - Only mark sourceBasis="llm" when you are filling in information not directly supported by the document.
 - affectedOrgans must only use keys from this list:
 ["brain","spinal_cord","eyes","ears","nose","tonsils","throat","trachea","esophagus","thyroid","lymph_nodes","lungs","heart","diaphragm","liver","gallbladder","stomach","spleen","pancreas","adrenal_glands","kidneys","appendix","small_intestine","intestines","colon","large_intestine","rectum","bladder","urethra","uterus","ovaries","testes","prostate","skin","blood","immune","muscles","nerves","feet"]

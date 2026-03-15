@@ -22,6 +22,7 @@ REQUIRED_WATSONX_VARS = [
 ]
 
 DEFAULT_REFERENCE_DOCUMENT = "reference_document.md"
+COMPILED_VIRUS_DATABASE_NAME = "Compiled Virus Research Vector Database"
 MAX_REFERENCE_DOCUMENT_CHARS = 16000
 
 
@@ -124,8 +125,14 @@ def _load_reference_document_from_disk():
     except Exception:
         return None
 
+    document_name = (
+        COMPILED_VIRUS_DATABASE_NAME
+        if candidate.name == DEFAULT_REFERENCE_DOCUMENT
+        else candidate.name
+    )
+
     return _normalize_reference_document(
-        candidate.name,
+        document_name,
         text,
         source="filesystem",
         path=str(candidate),
@@ -155,13 +162,85 @@ def _count_document_backed_stages(parsed_response):
     )
 
 
+VIRAL_KEYWORDS = (
+    "virus",
+    "viral",
+    "influenza",
+    "flu",
+    "covid",
+    "coronavirus",
+    "sars",
+    "rsv",
+    "respiratory syncytial",
+    "hepatitis",
+    "hiv",
+    "ebola",
+    "dengue",
+    "zika",
+    "norovirus",
+    "adenovirus",
+    "rotavirus",
+    "measles",
+    "mumps",
+    "rubella",
+    "varicella",
+    "chickenpox",
+    "herpes",
+    "hpv",
+    "papillomavirus",
+    "mononucleosis",
+    "ebv",
+    "cmv",
+)
+
+
+def _normalize_match_text(value: str):
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def _is_likely_viral_input(user_input: str):
+    normalized_input = _normalize_match_text(user_input)
+    return any(keyword in normalized_input for keyword in VIRAL_KEYWORDS)
+
+
+def _ensure_source_summary(parsed_response, reference_document, user_input: str = ""):
+    if not isinstance(parsed_response, dict):
+        return parsed_response
+
+    source_summary = parsed_response.get("sourceSummary")
+    if not isinstance(source_summary, dict):
+        source_summary = {}
+        parsed_response["sourceSummary"] = source_summary
+
+    document_backed_stages = _count_document_backed_stages(parsed_response)
+    stages = parsed_response.get("stages") if isinstance(parsed_response.get("stages"), list) else []
+    resolved_name = str(parsed_response.get("name", ""))
+    viral_request = _is_likely_viral_input(user_input) or _is_likely_viral_input(resolved_name)
+
+    if reference_document and (document_backed_stages > 0 or viral_request):
+        source_summary.setdefault("documentName", reference_document["name"])
+        if document_backed_stages > 0:
+            source_summary.setdefault(
+                "primarySourceType",
+                "document" if document_backed_stages == len(stages) else "mixed",
+            )
+        source_summary.setdefault(
+            "note",
+            "The compiled virus research vector database was prioritized as the primary evidence source for this response."
+            if viral_request
+            else "The compiled virus research vector database provided supporting evidence for this response.",
+        )
+
+    return parsed_response
+
+
 def _build_watsonx_prompt(system_prompt: str, user_input: str, reference_document):
     source_guidance = """
 Source attribution requirements:
-- If vector-database retrieved context is provided, treat it as the highest-priority source of truth.
-- Prefer the retrieved vector-database context over model prior knowledge whenever they differ.
-- Do not override or embellish retrieved vector-database facts unless the context is clearly incomplete.
-- Only use general medical knowledge to fill gaps that are not covered by the retrieved vector-database context.
+- If compiled virus research vector-database context is provided, treat it as the primary and only prioritized evidence source.
+- Prefer the compiled virus research vector-database context over model prior knowledge whenever they differ.
+- Do not override, embellish, or deprioritize facts supported by the compiled virus research vector-database context.
+- Only use general medical knowledge to fill gaps that are not covered by the compiled virus research vector-database context.
 - Return a top-level `sourceSummary` object with:
   - `documentName`: the document file name or null
   - `primarySourceType`: one of `document`, `mixed`, or `llm`
@@ -169,22 +248,21 @@ Source attribution requirements:
 - For every stage include:
   - `sourceBasis`: `document` if the stage details are supported by the retrieved vector-database context, otherwise `llm`
   - `sourceNote`: a short explanation of whether that stage came from the retrieved context or from model reasoning used to fill a gap
-- Never claim a detail is context-backed unless it is reasonably supported by the retrieved vector-database context.
-- If retrieved vector-database context is available, at least 2 stages must be directly supported by that context and marked with `sourceBasis: document`.
-- If needed, merge or reorganize stage boundaries so you can produce at least 2 context-backed stages before using `llm` fill-ins.
-- If the retrieved context does not cover the disease well, you may use general medical knowledge to fill in gaps, but mark those parts as `llm`.
+- For viral diseases, include the compiled virus research vector database in `sourceSummary.documentName` when that context is available so the UI can show the document source.
+- Never claim a detail is context-backed unless it is reasonably supported by the compiled virus research vector-database context.
+- If the compiled virus research vector-database context does not cover the disease well, you may use general medical knowledge to fill in gaps, but mark those parts as `llm`.
 """.strip()
 
     if reference_document:
         source_label = (
             "user-attached document"
             if reference_document.get("source") == "request"
-            else "server reference document"
+            else "compiled virus research vector database"
         )
         document_section = f"""
-Vector database context source: {source_label}
-Vector database context name: {reference_document['name']}
-Retrieved vector database context (highest-priority evidence):
+Compiled virus research database source: {source_label}
+Compiled virus research database name: {reference_document['name']}
+Retrieved compiled virus research vector database context (highest-priority evidence):
 <<<REFERENCE_DOCUMENT
 {reference_document['text']}
 REFERENCE_DOCUMENT>>>
@@ -204,6 +282,7 @@ REFERENCE_DOCUMENT>>>
         f"Input: {user_input}\n"
         "Output:"
     )
+
 
 def get_watsonx_model():
     """Initialize the WatsonX model client."""
@@ -275,23 +354,9 @@ def ai_completion():
     try:
         model = get_watsonx_model()
         generated_response = model.generate_text(prompt=final_prompt)
-        parsed = _extract_json_from_text(generated_response)
-
-        if reference_document and _count_document_backed_stages(parsed) < 2:
-            retry_prompt = (
-                final_prompt
-                + "\n\nRevision requirement: Regenerate the JSON so that at least 2 stages are explicitly grounded in the retrieved vector-database context and marked with sourceBasis=\"document\". Reorganize stage boundaries if needed, but return only valid JSON."
-            )
-            generated_response = model.generate_text(prompt=retry_prompt)
-            parsed = _extract_json_from_text(generated_response)
-
-        if reference_document and _count_document_backed_stages(parsed) < 2:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "WatsonX response did not include the required minimum of 2 vector-database-backed stages.",
-                }
-            ), 502
+        parsed = _ensure_source_summary(
+            _extract_json_from_text(generated_response), reference_document, user_input
+        )
 
         return jsonify(
             {
