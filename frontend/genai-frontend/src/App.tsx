@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { SearchPanel } from "./app/components/SearchPanel";
-import { HumanBody3D } from "./app/components/HumanBody3D";
 import { DiseaseStagePanel } from "./app/components/DiseaseStagePanel";
 import { LandingPage } from "./app/components/LandingPage";
 import { DISEASES } from "./types";
 import type { Disease } from "./types";
-import AnatomyViewer from "./app/components/AnatomyViewer";
 
 export default function App() {
-  const [selectedDisease, setSelectedDisease] = useState<Disease | null>(DISEASES[0]);
+  const [selectedDisease, setSelectedDisease] = useState<Disease | null>(
+    DISEASES[0]
+  );
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [showLanding, setShowLanding] = useState(true);
+  const [hoveredAffectedOrgan, setHoveredAffectedOrgan] = useState<
+    string | null
+  >(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -22,8 +25,13 @@ export default function App() {
     let hoverState = false;
     let textState = false;
 
+    const cursorOffsetX = 3;
+    const cursorOffsetY = 3;
+
     const setCursorPosition = (x: number, y: number) => {
-      cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      cursorEl.style.transform = `translate3d(${x + cursorOffsetX}px, ${
+        y + cursorOffsetY
+      }px, 0)`;
       if (!visible) {
         visible = true;
         document.body.classList.add("cursor-visible");
@@ -48,7 +56,12 @@ export default function App() {
 
     const onWindowLeave = () => {
       visible = false;
-      document.body.classList.remove("cursor-visible", "cursor-hover", "cursor-pressed", "cursor-text");
+      document.body.classList.remove(
+        "cursor-visible",
+        "cursor-hover",
+        "cursor-pressed",
+        "cursor-text"
+      );
       hoverState = false;
       textState = false;
     };
@@ -88,27 +101,39 @@ export default function App() {
 
     window.addEventListener("pointermove", onPointerMove, { capture: true });
     window.addEventListener("mousemove", onMouseMove, { capture: true });
-    window.addEventListener("pointerrawupdate", onPointerRawUpdate, { capture: true });
+    window.addEventListener("pointerrawupdate", onPointerRawUpdate, {
+      capture: true,
+    });
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("blur", onWindowLeave);
     document.addEventListener("mouseleave", onWindowLeave);
 
     return () => {
-      window.removeEventListener("pointermove", onPointerMove, { capture: true });
+      window.removeEventListener("pointermove", onPointerMove, {
+        capture: true,
+      });
       window.removeEventListener("mousemove", onMouseMove, { capture: true });
-      window.removeEventListener("pointerrawupdate", onPointerRawUpdate, { capture: true });
+      window.removeEventListener("pointerrawupdate", onPointerRawUpdate, {
+        capture: true,
+      });
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("blur", onWindowLeave);
       document.removeEventListener("mouseleave", onWindowLeave);
-      document.body.classList.remove("cursor-visible", "cursor-hover", "cursor-pressed", "cursor-text");
+      document.body.classList.remove(
+        "cursor-visible",
+        "cursor-hover",
+        "cursor-pressed",
+        "cursor-text"
+      );
     };
   }, []);
 
   const handleSelectDisease = (disease: Disease) => {
     setSelectedDisease(disease);
     setCurrentStageIndex(0);
+    setHoveredAffectedOrgan(null);
   };
 
   const handleSearchChange = (term: string) => {
@@ -124,6 +149,9 @@ export default function App() {
   };
 
   const currentStage = selectedDisease?.stages[currentStageIndex] ?? null;
+  const displayedAffectedOrgans = hoveredAffectedOrgan
+    ? [hoveredAffectedOrgan]
+    : currentStage?.affectedOrgans ?? [];
 
   const handleEnterFromLanding = (prompt: string) => {
     if (prompt) {
@@ -136,13 +164,21 @@ export default function App() {
     setShowLanding(false);
   };
 
+  const handleStageSelect = (index: number) => {
+    setCurrentStageIndex(index);
+    setHoveredAffectedOrgan(null);
+  };
+
   return (
     <div className="app-grid-surface h-screen w-screen overflow-hidden p-1.5 text-slate-900 sm:p-2 lg:p-3">
       {showLanding ? (
-        <LandingPage onEnter={handleEnterFromLanding} onSkip={handleSkipLanding} />
+        <LandingPage
+          onEnter={handleEnterFromLanding}
+          onSkip={handleSkipLanding}
+        />
       ) : (
         <div className="grid h-full min-h-0 grid-cols-[minmax(0,0.9fr)_minmax(320px,1.8fr)_minmax(0,1fr)] gap-1.5 sm:gap-2 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.7fr)_minmax(0,1.02fr)] lg:gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.6fr)_minmax(0,1.05fr)]">
-          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
+          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
             <SearchPanel
               diseases={DISEASES}
               onSelectDisease={handleSelectDisease}
@@ -153,36 +189,34 @@ export default function App() {
           </aside>
 
           <main className="min-w-0 flex-1 overflow-hidden rounded-[28px]">
-          {selectedDisease && currentStage ? (
-            <AnatomyViewer 
-                affectedOrgans={currentStage.affectedOrgans}
-                allUsedOrgans={[...new Set(selectedDisease.stages.flatMap(s => s.affectedOrgans))]}
+            {selectedDisease && currentStage ? (
+              <AnatomyViewer
+                affectedOrgans={displayedAffectedOrgans}
+                allUsedOrgans={[
+                  ...new Set(
+                    selectedDisease.stages.flatMap((s) => s.affectedOrgans)
+                  ),
+                ]}
                 currentStageIndex={currentStageIndex}
                 totalStages={selectedDisease.stages.length}
                 diseaseName={selectedDisease.name}
                 currentStage={currentStage}
-            />
-            // <HumanBody3D
-            //   affectedOrgans={currentStage.affectedOrgans}
-            //   currentStageIndex={currentStageIndex}
-            //   totalStages={selectedDisease.stages.length}
-            //   diseaseName={selectedDisease.name}
-            //   currentStage={currentStage}
-            // />
-          ) : (
-            <div className="grid h-full place-items-center px-8 text-center text-slate-300">
-              Select a disease to view progression.
-            </div>
-          )}
-        </main>
+              />
+            ) : (
+              <div className="grid h-full place-items-center px-8 text-center text-slate-300">
+                Select a disease to view progression.
+              </div>
+            )}
+          </main>
 
-          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-slate-50 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
+          <aside className="min-w-0 overflow-hidden rounded-[9px] border border-slate-200/90 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:rounded-[11px]">
             {selectedDisease ? (
               <DiseaseStagePanel
                 stages={selectedDisease.stages}
                 currentStageIndex={currentStageIndex}
-                onStageSelect={setCurrentStageIndex}
+                onStageSelect={handleStageSelect}
                 diseaseName={selectedDisease.name}
+                onAffectedOrganHover={setHoveredAffectedOrgan}
               />
             ) : (
               <div className="grid h-full place-items-center px-8 text-center text-slate-500">
@@ -197,4 +231,3 @@ export default function App() {
     </div>
   );
 }
-

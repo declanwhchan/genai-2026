@@ -6,7 +6,7 @@ type GLTFResult = {
   scene: THREE.Group;
 };
 
-export default function Model({ onCenter }: { onCenter?: (v: THREE.Vector3) => void }) {
+export default function Model() {
   const { scene } = useGLTF("/human_modeluntextured.glb") as GLTFResult;
 
   useEffect(() => {
@@ -14,8 +14,9 @@ export default function Model({ onCenter }: { onCenter?: (v: THREE.Vector3) => v
     const box = new THREE.Box3().setFromObject(scene);
     const center = box.getCenter(new THREE.Vector3());
 
-    // Move model so center sits at origin
-    scene.position.sub(center);
+    // Use an absolute offset so StrictMode's dev-only double effect
+    // doesn't keep shifting the model farther away.
+    scene.position.set(-center.x, -center.y, -center.z);
 
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
@@ -33,8 +34,7 @@ export default function Model({ onCenter }: { onCenter?: (v: THREE.Vector3) => v
       }
     });
 
-    onCenter?.(new THREE.Vector3(0, 0, 0));
-  }, [scene, onCenter]);
+  }, [scene]);
 
   return <primitive object={scene} />;
 }
